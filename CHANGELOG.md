@@ -1,3 +1,55 @@
+## 1.1.0
+
+- **Requires Flutter 3.47 and Dart 3.13.** Flutter 3.47 also raises its own
+  iOS minimum to 15.0, which the plugin already targeted. Apps on older
+  Flutter versions keep resolving 1.0.5.
+- **iOS: UIScene lifecycle.** The iOS 27 SDK requires the `UIScene` lifecycle
+  for UIKit apps, so the plugin now also registers as a scene delegate and
+  installs the hinge interaction from `sceneDidBecomeActive`. Apps that have
+  not migrated keep working through the application delegate. The plugin
+  also takes its Flutter view from `registrar.viewController` instead of
+  searching the app's windows, which could pick another view in add-to-app
+  or multi-scene apps.
+- **Fixed:** `DuoMediaQuery.angleOf` missed slow folds. Its 0.5° threshold
+  was measured from the previous reading, so a fold made of small steps
+  never rebuilt the widgets reading it. `FoldableProvider` now measures the
+  threshold from the last angle it published, and publishes the exact angle
+  whenever the posture changes.
+- **Fixed:** `FoldAwareBuilder` rebuilt on every hinge-angle update, despite
+  being documented not to. It now rebuilds only for posture, regions, size
+  classes and capabilities, and `FoldInfo.angleDegrees` is the angle as of
+  the last rebuild.
+- **Fixed:** `FoldInfo.divisionRects` and `spansDivision` included folds
+  outside the builder, so a builder inside one pane reported the fold as
+  crossing it. They now include only folds that overlap the builder, and they
+  follow the builder when its scroll view scrolls.
+- **Fixed:** only the first listener of `Foldable.changes`,
+  `hingeAngleStream` or `hingeStatusStream` received the current snapshot.
+  Because `FoldableProvider` usually listens first, a `StreamBuilder` on
+  `hingeAngleStream` stayed empty until the hinge moved. Every listener now
+  receives it.
+- **Fixed:** with `debugData`, resizing the window replaced the simulated
+  state with the platform's, and a platform snapshot that arrived after
+  switching to `debugData` subscribed to the old platform anyway.
+- **Fixed:** cancelling the last listener before the first snapshot arrived
+  left native hinge events running, or, when a new listener arrived in time,
+  subscribed to them twice.
+- **Fixed (iOS):** on a foldable, a nil hinge, which iOS sends when the
+  interaction leaves a hierarchy that provides hinge updates, was treated as
+  "no hinge" and ended the event stream for the rest of the session.
+- **Fixed (iOS):** the hinge interaction stayed on the old view when the
+  Flutter view was replaced, event snapshots could read UIKit off the main
+  thread, and `debugDumpNativeApi` leaked a small buffer.
+- A channel field of the wrong type now falls back like a missing one instead
+  of throwing, and a native plugin that speaks another wire version is
+  reported in debug builds.
+- **Docs:** iOS 15 throughout. `FoldableSupportLevel.unknown` means the
+  platform has not yet settled whether there is a hinge, and
+  `FoldableCapabilities.angleUnitVerified` is `true` whenever an angle is
+  reported.
+- **Example app:** moved to Swift Package Manager and `material_ui`, and no
+  longer needs the `ARCHS = arm64` workaround for Xcode 27.1's `lipo`.
+
 ## 1.0.5
 
 - **Fixed:** `FoldableProvider` subscribed to the event stream only when the
