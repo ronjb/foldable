@@ -63,7 +63,8 @@ class _FoldableProviderState extends State<FoldableProvider> {
   bool _warnedAboutUpstream = false;
   Size? _lastSize;
 
-  FoldablePlatform get _platform => widget.platform ?? FoldablePlatform.instance;
+  FoldablePlatform get _platform =>
+      widget.platform ?? FoldablePlatform.instance;
 
   @override
   void initState() {
@@ -162,8 +163,7 @@ class _FoldableProviderState extends State<FoldableProvider> {
   ///
   /// Falls back to [DisplayFeatureBridgeMode.none] once Flutter itself starts
   /// reporting display features on iOS, so the fold is never published twice.
-  DisplayFeatureBridgeMode get _effectiveBridgeMode =>
-      _upstreamProvidesFeatures
+  DisplayFeatureBridgeMode get _effectiveBridgeMode => _upstreamProvidesFeatures
       ? DisplayFeatureBridgeMode.none
       : widget.bridgeMode;
 

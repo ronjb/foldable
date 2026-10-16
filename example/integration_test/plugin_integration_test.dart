@@ -58,11 +58,13 @@ void main() {
       expect(data.angleDegrees, inInclusiveRange(0.0, 180.0));
       expect(data.capabilities.angleUnitVerified, isTrue);
       // ignore: avoid_print
-      print('DUO: status=${data.status.name} '
-          'angle=${data.angleDegrees!.toStringAsFixed(1)} '
-          'strategy=${data.capabilities.strategy} '
-          'regions=${data.regions.length} '
-          'sizeClass=${data.horizontalSizeClass.name}');
+      print(
+        'DUO: status=${data.status.name} '
+        'angle=${data.angleDegrees!.toStringAsFixed(1)} '
+        'strategy=${data.capabilities.strategy} '
+        'regions=${data.regions.length} '
+        'sizeClass=${data.horizontalSizeClass.name}',
+      );
       for (final ReservedRegion r in data.regions) {
         // ignore: avoid_print
         print('  region ${r.kind.name} active=${r.isActive} ${r.bounds}');
@@ -79,10 +81,12 @@ void main() {
   testWidgets('native API dump reflects the running OS', (tester) async {
     final Map<String, Object?> dump = await Foldable.debugDumpNativeApi();
     // ignore: avoid_print
-    print('DUMP hingeApi=${dump['hingeApiPresent']} '
-        'regionApi=${dump['regionApiPresent']} '
-        'native=${dump['builtWithNativeApi']} '
-        'os=${dump['systemVersion']}');
+    print(
+      'DUMP hingeApi=${dump['hingeApiPresent']} '
+      'regionApi=${dump['regionApiPresent']} '
+      'native=${dump['builtWithNativeApi']} '
+      'os=${dump['systemVersion']}',
+    );
     expect(dump['classes'], isA<Map<Object?, Object?>>());
   });
 }

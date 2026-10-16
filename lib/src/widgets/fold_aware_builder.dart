@@ -70,12 +70,10 @@ class FoldInfo {
   bool get isClosed => status == HingeStatus.closed;
 
   /// Whether a fold currently crosses this builder's area.
-  bool get spansDivision =>
-      divisionRects.any((Rect rect) => !rect.isEmpty);
+  bool get spansDivision => divisionRects.any((Rect rect) => !rect.isEmpty);
 
   /// The first fold crossing this builder, if any.
-  Rect? get divisionRect =>
-      divisionRects.isEmpty ? null : divisionRects.first;
+  Rect? get divisionRect => divisionRects.isEmpty ? null : divisionRects.first;
 
   @override
   bool operator ==(Object other) =>
@@ -102,12 +100,11 @@ class FoldInfo {
 }
 
 /// Signature for [FoldAwareBuilder.builder].
-typedef FoldAwareWidgetBuilder =
-    Widget Function(
-      BuildContext context,
-      BoxConstraints constraints,
-      FoldInfo fold,
-    );
+typedef FoldAwareWidgetBuilder = Widget Function(
+  BuildContext context,
+  BoxConstraints constraints,
+  FoldInfo fold,
+);
 
 /// Rebuilds when the fold posture or geometry changes.
 ///

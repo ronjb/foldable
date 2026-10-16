@@ -6,29 +6,30 @@ import 'package:foldable/foldable.dart';
 // Regression test for issue #2: the provider must keep listening when the
 // first snapshot has not settled yet.
 
-Map<String, Object?> snapshot(
-        {required bool settled, String status = 'unknown'}) =>
+Map<String, Object?> snapshot({
+  required bool settled,
+  String status = 'unknown',
+}) => <String, Object?>{
+  'wireVersion': 1,
+  'supportLevel': settled ? 'available' : 'unknown',
+  'isFoldable': settled,
+  'hingeApiPresent': true,
+  'regionApiPresent': true,
+  'angleUnitVerified': true,
+  'strategy': 'test',
+  'status': status,
+  'angleDegrees': status == 'partiallyOpen' ? 95.0 : null,
+  'regions': <Object?>[
     <String, Object?>{
-      'wireVersion': 1,
-      'supportLevel': settled ? 'available' : 'unknown',
-      'isFoldable': settled,
-      'hingeApiPresent': true,
-      'regionApiPresent': true,
-      'angleUnitVerified': true,
-      'strategy': 'test',
-      'status': status,
-      'angleDegrees': status == 'partiallyOpen' ? 95.0 : null,
-      'regions': <Object?>[
-        <String, Object?>{
-          'kind': 'division',
-          'active': status == 'partiallyOpen',
-          'left': 455.5,
-          'top': 0.0,
-          'width': 40.0,
-          'height': 669.0,
-        },
-      ],
-    };
+      'kind': 'division',
+      'active': status == 'partiallyOpen',
+      'left': 455.5,
+      'top': 0.0,
+      'width': 40.0,
+      'height': 669.0,
+    },
+  ],
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,9 +47,11 @@ void main() {
       )
       ..setMockStreamHandler(
         const EventChannel('foldable/events'),
-        MockStreamHandler.inline(onListen: (_, MockStreamHandlerEventSink s) {
-          sink = s;
-        }),
+        MockStreamHandler.inline(
+          onListen: (_, MockStreamHandlerEventSink s) {
+            sink = s;
+          },
+        ),
       );
   });
 
@@ -83,8 +86,11 @@ void main() {
       }
 
       await settle();
-      expect(sink, isNotNull,
-          reason: 'provider should listen to foldable/events');
+      expect(
+        sink,
+        isNotNull,
+        reason: 'provider should listen to foldable/events',
+      );
       sink!.success(snapshot(settled: true, status: 'partiallyOpen'));
       await settle();
       expect(MediaQuery.of(ctx).displayFeatures, isNotEmpty);

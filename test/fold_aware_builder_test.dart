@@ -1,7 +1,6 @@
 import 'dart:async';
 
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foldable/foldable.dart';
 
@@ -91,7 +90,11 @@ void main() {
     await pushData(
       tester,
       feed,
-      dataFor(status: HingeStatus.partiallyOpen, angle: 97, withOcclusion: true),
+      dataFor(
+        status: HingeStatus.partiallyOpen,
+        angle: 97,
+        withOcclusion: true,
+      ),
     );
 
     expect(seen.isFoldable, isTrue);

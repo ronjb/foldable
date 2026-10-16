@@ -7,19 +7,17 @@ import 'package:foldable/foldable.dart';
 /// The inner display of an iPhone Duo in logical pixels (1878x2670 @3x).
 const Size kInnerDisplay = Size(626, 890);
 
-ReservedRegion division({
-  required bool active,
-  double thickness = 40,
-}) => ReservedRegion(
-  kind: ReservedRegionKind.division,
-  bounds: Rect.fromLTWH(
-    (kInnerDisplay.width - thickness) / 2,
-    0,
-    thickness,
-    kInnerDisplay.height,
-  ),
-  isActive: active,
-);
+ReservedRegion division({required bool active, double thickness = 40}) =>
+    ReservedRegion(
+      kind: ReservedRegionKind.division,
+      bounds: Rect.fromLTWH(
+        (kInnerDisplay.width - thickness) / 2,
+        0,
+        thickness,
+        kInnerDisplay.height,
+      ),
+      isActive: active,
+    );
 
 const ReservedRegion occlusion = ReservedRegion(
   kind: ReservedRegionKind.occlusion,
@@ -54,25 +52,22 @@ void main() {
       expect(features, isEmpty);
     });
 
-    test(
-      'zero-width division would otherwise satisfy avoidBounds - proof',
-      () {
-        // Demonstrates the trap R1 exists to prevent: a zero-width feature in
-        // postureHalfOpened passes the framework predicate and splits the
-        // screen with no visible fold.
-        final MediaQueryData trap = MediaQueryData(
-          size: kInnerDisplay,
-          displayFeatures: <DisplayFeature>[
-            DisplayFeature(
-              bounds: Rect.fromLTRB(313, 0, 313, kInnerDisplay.height),
-              type: DisplayFeatureType.fold,
-              state: DisplayFeatureState.postureHalfOpened,
-            ),
-          ],
-        );
-        expect(DisplayFeatureSubScreen.avoidBounds(trap), hasLength(1));
-      },
-    );
+    test('zero-width division would otherwise satisfy avoidBounds - proof', () {
+      // Demonstrates the trap R1 exists to prevent: a zero-width feature in
+      // postureHalfOpened passes the framework predicate and splits the
+      // screen with no visible fold.
+      final MediaQueryData trap = MediaQueryData(
+        size: kInnerDisplay,
+        displayFeatures: <DisplayFeature>[
+          DisplayFeature(
+            bounds: Rect.fromLTRB(313, 0, 313, kInnerDisplay.height),
+            type: DisplayFeatureType.fold,
+            state: DisplayFeatureState.postureHalfOpened,
+          ),
+        ],
+      );
+      expect(DisplayFeatureSubScreen.avoidBounds(trap), hasLength(1));
+    });
   });
 
   group('R2 - inactive regions', () {

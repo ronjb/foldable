@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foldable/foldable.dart';
@@ -49,8 +47,7 @@ void main() {
   void mockMethods(Map<String, Object?>? snapshot) {
     messenger.setMockMethodCallHandler(
       const MethodChannel(kFoldableMethodChannel),
-      (MethodCall call) async =>
-          call.method == 'getSnapshot' ? snapshot : null,
+      (MethodCall call) async => call.method == 'getSnapshot' ? snapshot : null,
     );
   }
 
@@ -62,8 +59,8 @@ void main() {
     );
   }
 
-  Future<void> emit(Map<String, Object?> event) => messenger
-      .handlePlatformMessage(
+  Future<void> emit(Map<String, Object?> event) =>
+      messenger.handlePlatformMessage(
         kFoldableEventChannel,
         codec.encodeSuccessEnvelope(event),
         (_) {},
@@ -220,8 +217,12 @@ void main() {
       await pumpEventQueue();
 
       // Angle sweeps at a constant posture must not produce events.
-      await emit(payload(isFoldable: true, status: 'partiallyOpen', angle: 100.0));
-      await emit(payload(isFoldable: true, status: 'partiallyOpen', angle: 140.0));
+      await emit(
+        payload(isFoldable: true, status: 'partiallyOpen', angle: 100.0),
+      );
+      await emit(
+        payload(isFoldable: true, status: 'partiallyOpen', angle: 140.0),
+      );
       await emit(payload(isFoldable: true, status: 'fullyOpen', angle: 180.0));
       await pumpEventQueue();
 

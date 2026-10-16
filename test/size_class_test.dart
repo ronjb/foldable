@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show DisplayFeature;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foldable/foldable.dart';
 import 'package:foldable/src/platform/foldable_codec.dart';
@@ -184,11 +184,10 @@ void main() {
           home: FoldableProvider(
             debugData: feed.stream,
             child: FoldAwareBuilder(
-              builder:
-                  (BuildContext context, BoxConstraints c, FoldInfo fold) {
-                    seen = fold;
-                    return const SizedBox.expand();
-                  },
+              builder: (BuildContext context, BoxConstraints c, FoldInfo fold) {
+                seen = fold;
+                return const SizedBox.expand();
+              },
             ),
           ),
         ),
@@ -219,11 +218,10 @@ void main() {
           home: FoldableProvider(
             debugData: feed.stream,
             child: FoldAwareBuilder(
-              builder:
-                  (BuildContext context, BoxConstraints c, FoldInfo fold) {
-                    seen = fold;
-                    return const SizedBox.expand();
-                  },
+              builder: (BuildContext context, BoxConstraints c, FoldInfo fold) {
+                seen = fold;
+                return const SizedBox.expand();
+              },
             ),
           ),
         ),

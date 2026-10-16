@@ -81,8 +81,7 @@ class FoldableData {
 
   /// The active fold regions, ignoring camera cutouts and inactive folds.
   Iterable<ReservedRegion> get activeDivisions => regions.where(
-    (ReservedRegion r) =>
-        r.isActive && r.kind == ReservedRegionKind.division,
+    (ReservedRegion r) => r.isActive && r.kind == ReservedRegionKind.division,
   );
 
   /// Returns a copy with the given fields replaced.

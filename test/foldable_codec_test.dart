@@ -63,76 +63,71 @@ void main() {
     test('integer angle does not crash the num cast', () {
       // The standard codec sends a whole number as Int32, so `as double`
       // would throw here. This is the most likely first-day bug.
-      final FoldableData data = FoldableCodec.decodeSnapshot(
-        <Object?, Object?>{'isFoldable': true, 'angleDegrees': 90},
-      );
+      final FoldableData data = FoldableCodec.decodeSnapshot(<Object?, Object?>{
+        'isFoldable': true,
+        'angleDegrees': 90,
+      });
       expect(data.angleDegrees, 90.0);
       expect(data.angleDegrees, isA<double>());
     });
 
     test('integer region bounds are accepted', () {
-      final FoldableData data = FoldableCodec.decodeSnapshot(
-        <Object?, Object?>{
-          'regions': <Map<String, Object?>>[
-            <String, Object?>{
-              'kind': 'occlusion',
-              'active': true,
-              'left': 283,
-              'top': 0,
-              'width': 60,
-              'height': 30,
-            },
-          ],
-        },
-      );
+      final FoldableData data = FoldableCodec.decodeSnapshot(<Object?, Object?>{
+        'regions': <Map<String, Object?>>[
+          <String, Object?>{
+            'kind': 'occlusion',
+            'active': true,
+            'left': 283,
+            'top': 0,
+            'width': 60,
+            'height': 30,
+          },
+        ],
+      });
       expect(data.regions.single.bounds, const Rect.fromLTWH(283, 0, 60, 30));
     });
 
     test('unknown status and kind strings fall back, never throw', () {
-      final FoldableData data = FoldableCodec.decodeSnapshot(
-        <Object?, Object?>{
-          'status': 'tentMode',
-          'regions': <Map<String, Object?>>[
-            <String, Object?>{
-              'kind': 'somethingNew',
-              'active': true,
-              'left': 0.0,
-              'top': 0.0,
-              'width': 1.0,
-              'height': 1.0,
-            },
-          ],
-        },
-      );
+      final FoldableData data = FoldableCodec.decodeSnapshot(<Object?, Object?>{
+        'status': 'tentMode',
+        'regions': <Map<String, Object?>>[
+          <String, Object?>{
+            'kind': 'somethingNew',
+            'active': true,
+            'left': 0.0,
+            'top': 0.0,
+            'width': 1.0,
+            'height': 1.0,
+          },
+        ],
+      });
       expect(data.status, HingeStatus.unknown);
       expect(data.regions.single.kind, ReservedRegionKind.unknown);
     });
 
     test('region with missing geometry is dropped, siblings survive', () {
-      final FoldableData data = FoldableCodec.decodeSnapshot(
-        <Object?, Object?>{
-          'regions': <Object?>[
-            <String, Object?>{'kind': 'division', 'active': true},
-            'not a map',
-            <String, Object?>{
-              'kind': 'occlusion',
-              'active': true,
-              'left': 0.0,
-              'top': 0.0,
-              'width': 10.0,
-              'height': 10.0,
-            },
-          ],
-        },
-      );
+      final FoldableData data = FoldableCodec.decodeSnapshot(<Object?, Object?>{
+        'regions': <Object?>[
+          <String, Object?>{'kind': 'division', 'active': true},
+          'not a map',
+          <String, Object?>{
+            'kind': 'occlusion',
+            'active': true,
+            'left': 0.0,
+            'top': 0.0,
+            'width': 10.0,
+            'height': 10.0,
+          },
+        ],
+      });
       expect(data.regions, hasLength(1));
       expect(data.regions.single.kind, ReservedRegionKind.occlusion);
     });
 
     test('non-list regions value is tolerated', () {
-      final FoldableData data = FoldableCodec.decodeSnapshot(
-        <Object?, Object?>{'regions': 'oops'},
-      );
+      final FoldableData data = FoldableCodec.decodeSnapshot(<Object?, Object?>{
+        'regions': 'oops',
+      });
       expect(data.regions, isEmpty);
     });
   });

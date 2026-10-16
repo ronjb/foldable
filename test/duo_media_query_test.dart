@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show DisplayFeature, Rect;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foldable/foldable.dart';
 
@@ -78,7 +78,11 @@ void main() {
         ),
       );
 
-      await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 95));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 95),
+      );
 
       expect(observed, isEmpty);
     });
@@ -110,7 +114,11 @@ void main() {
 
         await tester.pumpWidget(MaterialApp(home: Scaffold(body: body)));
         if (withProvider) {
-          await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 95));
+          await pushData(
+            tester,
+            feed,
+            dataFor(status: HingeStatus.partiallyOpen, angle: 95),
+          );
         }
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
@@ -154,7 +162,11 @@ void main() {
         ),
       );
 
-      await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 95));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 95),
+      );
 
       expect(observed.displayFeatures, hasLength(1));
       expect(DisplayFeatureSubScreen.avoidBounds(observed), hasLength(1));
@@ -183,7 +195,11 @@ void main() {
         ),
       );
 
-      await pushData(tester, feed, dataFor(status: HingeStatus.fullyOpen, divisionActive: false));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.fullyOpen, divisionActive: false),
+      );
 
       expect(observed, isEmpty);
     });
@@ -226,12 +242,20 @@ void main() {
         ),
       );
 
-      await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 90));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 90),
+      );
       final int statusAfterFirst = statusBuilds;
       final int angleAfterFirst = angleBuilds;
 
       // A large angle sweep at a constant posture.
-      await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 120));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 120),
+      );
 
       expect(
         statusBuilds,
@@ -264,10 +288,18 @@ void main() {
         ),
       );
 
-      await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 90.0));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 90.0),
+      );
       final int baseline = angleBuilds;
 
-      await pushData(tester, feed, dataFor(status: HingeStatus.partiallyOpen, angle: 90.2));
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 90.2),
+      );
 
       expect(angleBuilds, baseline);
     });

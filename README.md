@@ -197,29 +197,28 @@ The hinge angle and posture are unaffected.
 
 ## If your build breaks on Xcode 27.1
 
-Two problems you will hit there have nothing to do with this package, but you
-will meet them the moment you point Flutter at the new toolchain:
+One problem you may hit there has nothing to do with this package, but you
+will meet it the moment you point Flutter at the new toolchain: Xcode 27.1
+refuses any deployment target below iOS 15.0, and Flutter's own pods still
+declare older ones. Apps on Swift Package Manager, like the example app in this
+repository, are not affected. If yours still uses CocoaPods, raise your app's
+target and force the pods to match in your `Podfile`:
 
-- **Deployment target.** Xcode 27.1 refuses anything below iOS 15.0, and
-  Flutter's own pods still declare 13.0. Raise your app's target and force the
-  pods to match in your `Podfile`:
+```ruby
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end
+```
 
-      post_install do |installer|
-        installer.pods_project.targets.each do |target|
-          flutter_additional_ios_build_settings(target)
-          target.build_configurations.each do |config|
-            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-          end
-        end
-      end
-
-- **`lipo -verify_arch`.** Xcode 27.1's `lipo` accepts only one architecture per
-  call, and Flutter 3.44 passes both simulator slices at once, so the build dies
-  in `debug_unpack_ios` with "does not contain architectures arm64 x86_64" even
-  though `lipo -info` lists both. Building the simulator for a single
-  architecture avoids it, via `ARCHS = arm64` in `ios/Flutter/Debug.xcconfig`.
-
-The example app in this repository carries both workarounds.
+Older Flutter releases also failed simulator builds on Xcode 27.1 in
+`lipo -verify_arch`. Flutter 3.47, the minimum this package supports, fixed
+that, so an `ARCHS = arm64` override in `ios/Flutter/Debug.xcconfig` is no
+longer needed and can be removed.
 
 ## How it compiles on every Xcode
 

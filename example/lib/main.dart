@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show DisplayFeature;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:foldable/foldable.dart';
 
 void main() => runApp(const FoldableExampleApp());
@@ -157,9 +157,9 @@ class _HomePage extends StatelessWidget {
           IconButton(
             tooltip: 'Native API dump',
             icon: const Icon(Icons.bug_report_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const _DumpPage()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => const _DumpPage())),
           ),
         ],
       ),
@@ -172,10 +172,7 @@ class _HomePage extends StatelessWidget {
           const SizedBox(height: 16),
           const _FoldAwareCard(),
           const SizedBox(height: 16),
-          _BridgeCard(
-            bridgeMode: bridgeMode,
-            onChanged: onBridgeModeChanged,
-          ),
+          _BridgeCard(bridgeMode: bridgeMode, onChanged: onBridgeModeChanged),
           const SizedBox(height: 16),
           _SimulatorCard(
             simulate: simulate,
@@ -240,8 +237,7 @@ class _AngleCard extends StatelessWidget {
     return StreamBuilder<double>(
       stream: Foldable.hingeAngleStream,
       builder: (BuildContext context, AsyncSnapshot<double> snapshot) {
-        final double? angle =
-            snapshot.data ?? DuoMediaQuery.angleOf(context);
+        final double? angle = snapshot.data ?? DuoMediaQuery.angleOf(context);
         return _buildCard(context, angle);
       },
     );
@@ -254,10 +250,7 @@ class _AngleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Hinge angle',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Hinge angle', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Row(
               children: <Widget>[
@@ -331,7 +324,10 @@ class _FoldAwareCard extends StatelessWidget {
                       return Row(
                         children: const <Widget>[
                           Expanded(
-                            child: _Pane(label: 'Leading', detail: 'left of fold'),
+                            child: _Pane(
+                              label: 'Leading',
+                              detail: 'left of fold',
+                            ),
                           ),
                           SizedBox(width: 24),
                           Expanded(
