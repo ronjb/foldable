@@ -96,7 +96,9 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   /// read outside layout. So a view with no content reads them in its
   /// `layoutSubviews`, which is all it takes.
   private func observeRegionLayout(in host: UIView) {
-    guard regionObserver == nil else { return }
+    // Moves with the hinge interaction when the Flutter view is replaced.
+    guard regionObserver?.superview !== host else { return }
+    regionObserver?.removeFromSuperview()
     let observer = RegionLayoutObserver(frame: host.bounds)
     observer.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     observer.isUserInteractionEnabled = false
@@ -237,13 +239,13 @@ final class HingeStreamHandler: NSObject, FlutterStreamHandler {
 
   /// Forwards an update, and closes the stream once it is known there is no
   /// hinge, so a listener is never left waiting on a device that has none.
+  ///
+  /// The snapshot is built on the main thread as well, because it reads UIKit.
   func emit(_ reading: HingeReading?) {
-    guard let sink = sink else { return }
-    let payload = snapshotBuilder(reading)
-    let settledWithoutHinge = hingeSource.hasHinge == false
-    let deliver = {
-      sink(payload)
-      if settledWithoutHinge { sink(FlutterEndOfEventStream) }
+    let deliver = { [weak self] in
+      guard let self = self, let sink = self.sink else { return }
+      sink(self.snapshotBuilder(reading))
+      if self.hingeSource.hasHinge == false { sink(FlutterEndOfEventStream) }
     }
     if Thread.isMainThread {
       deliver()

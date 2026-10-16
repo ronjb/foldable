@@ -31,6 +31,9 @@
 
     @discardableResult
     func start(on view: UIView, onChange: @escaping (HingeReading) -> Void) -> Bool {
+      // An interaction left on a view that was released or replaced delivers
+      // nothing, so it moves to the current one.
+      if interaction != nil, attachedView !== view { stop() }
       self.onChange = onChange
       if interaction != nil { return true }
 
@@ -54,9 +57,11 @@
 
     private func handle(_ update: UIHingeInteraction.Update) {
       // A nil hinge means this device has none, or the interaction left a
-      // hierarchy that provides hinge updates.
+      // hierarchy that provides hinge updates. Only a device that has never
+      // reported a hinge is settled as having none: settling a foldable that way
+      // would end its Dart stream for good.
       guard let hinge = update.hinge else {
-        knownHasHinge = false
+        if knownHasHinge == nil { knownHasHinge = false }
         latest = HingeReading.none
         onChange?(HingeReading.none)
         return

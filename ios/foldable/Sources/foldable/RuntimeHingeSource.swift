@@ -53,6 +53,9 @@ final class RuntimeHingeSource: NSObject, HingeSource {
 
   @discardableResult
   func start(on view: UIView, onChange: @escaping (HingeReading) -> Void) -> Bool {
+    // An interaction left on a view that was released or replaced delivers
+    // nothing, so it moves to the current one.
+    if interaction != nil, attachedView !== view { stop() }
     self.onChange = onChange
     if interaction != nil { return true }
 
@@ -96,15 +99,18 @@ final class RuntimeHingeSource: NSObject, HingeSource {
 
   // MARK: - Reading an update
 
-  private func handle(_ update: AnyObject?) {
+  /// Internal rather than private so tests can feed it updates.
+  func handle(_ update: AnyObject?) {
     guard let update = update as? NSObject else { return }
 
     // A nil hinge means this device has none, or the interaction left a
-    // hierarchy that provides hinge updates.
+    // hierarchy that provides hinge updates. Only a device that has never
+    // reported a hinge is settled as having none: settling a foldable that way
+    // would end its Dart stream for good.
     guard let hinge = ObjCRuntimeSupport.value(from: update, keyPath: "hinge")
       as? NSObject
     else {
-      knownHasHinge = false
+      if knownHasHinge == nil { knownHasHinge = false }
       let reading = HingeReading.none
       latest = reading
       onChange?(reading)

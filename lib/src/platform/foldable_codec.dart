@@ -8,16 +8,17 @@ import '../model/size_class.dart';
 
 /// Decodes platform channel payloads into models.
 ///
-/// Every field is read defensively. The standard method codec transmits whole
+/// Every field is read defensively: one of the wrong type falls back like a
+/// missing one instead of throwing. The standard method codec transmits whole
 /// numbers as integers, so an angle that happens to land on exactly 90 arrives
-/// as `int` and a plain `as double` cast would throw at runtime, hence
-/// `(value as num?)?.toDouble()` everywhere.
+/// as `int`, hence numbers are read as `num` and converted.
 abstract final class FoldableCodec {
   /// The wire schema version this package speaks.
   static const int wireVersion = 1;
 
-  /// Decodes a snapshot payload. Returns [FoldableData.unsupported] for a
-  /// `null` or malformed map rather than throwing.
+  /// Decodes a snapshot payload. Returns [FoldableData.unsupported] for
+  /// `null`, and safe defaults for missing or mistyped fields, rather than
+  /// throwing.
   static FoldableData decodeSnapshot(Map<Object?, Object?>? raw) {
     if (raw == null) return FoldableData.unsupported;
 
@@ -28,7 +29,10 @@ abstract final class FoldableCodec {
         hingeApiPresent: _bool(raw['hingeApiPresent']),
         regionApiPresent: _bool(raw['regionApiPresent']),
         angleUnitVerified: _bool(raw['angleUnitVerified']),
-        strategy: raw['strategy'] as String? ?? 'none',
+        strategy: switch (raw['strategy']) {
+          final String strategy => strategy,
+          _ => 'none',
+        },
       ),
       status: HingeStatus.fromWire(raw['status']),
       angleDegrees: _double(raw['angleDegrees']),
@@ -67,5 +71,6 @@ abstract final class FoldableCodec {
 
   static bool _bool(Object? value) => value is bool ? value : false;
 
-  static double? _double(Object? value) => (value as num?)?.toDouble();
+  static double? _double(Object? value) =>
+      value is num ? value.toDouble() : null;
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foldable/foldable.dart';
@@ -118,6 +119,22 @@ void main() {
     test('null response yields unsupported', () async {
       mockMethods(null);
       expect(await platform.getSnapshot(), FoldableData.unsupported);
+    });
+
+    test('a native wire version mismatch is reported, not fatal', () async {
+      mockMethods(<String, Object?>{
+        ...payload(isFoldable: true),
+        'wireVersion': 2,
+      });
+      final List<FlutterErrorDetails> errors = <FlutterErrorDetails>[];
+      final FlutterExceptionHandler? previous = FlutterError.onError;
+      FlutterError.onError = errors.add;
+      addTearDown(() => FlutterError.onError = previous);
+
+      final FoldableData data = await platform.getSnapshot();
+
+      expect(data.isFoldable, isTrue);
+      expect(errors.single.exception.toString(), contains('wire version 2'));
     });
   });
 

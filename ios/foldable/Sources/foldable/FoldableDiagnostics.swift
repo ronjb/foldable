@@ -81,6 +81,7 @@ enum FoldableDiagnostics {
   private static func protocolNames(of cls: AnyClass) -> [String] {
     var count: UInt32 = 0
     guard let list = class_copyProtocolList(cls, &count) else { return [] }
+    defer { free(UnsafeMutableRawPointer(list)) }
     return (0..<Int(count)).map { String(cString: protocol_getName(list[$0])) }
   }
 

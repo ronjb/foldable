@@ -13,7 +13,9 @@ enum FoldableSupportLevel {
   /// The hinge APIs exist and this device has a hinge.
   available('available'),
 
-  /// The native side did not answer.
+  /// Not settled yet: the hinge APIs exist, but the platform only reveals
+  /// whether this device has a hinge through its first hinge update. Also
+  /// used for a value this version of the package does not recognise.
   unknown('unknown');
 
   const FoldableSupportLevel(this.wireName);
@@ -74,8 +76,10 @@ class FoldableCapabilities {
   /// Whether the reserved-region selector was found on `UIView`.
   final bool regionApiPresent;
 
-  /// Whether the angle unit conversion has been confirmed against real
-  /// hardware. While `false`, treat the angle as approximate.
+  /// Whether the angle's unit is confirmed rather than assumed.
+  ///
+  /// The iOS 27.1 SDK documents the hinge angle in radians, so this is `true`
+  /// whenever the platform reports an angle.
   final bool angleUnitVerified;
 
   /// Which native resolution strategy produced the readings, for diagnostics.

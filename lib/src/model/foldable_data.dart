@@ -46,10 +46,8 @@ class FoldableData {
   ///
   /// `null` when the device has no hinge or no reading has arrived.
   ///
-  /// Apple has not documented the zero point of `hinge.angle`, so the native
-  /// bridge normalises the value and reports
-  /// [FoldableCapabilities.angleUnitVerified] alongside it. Until that flag is
-  /// `true`, treat the reading as approximate.
+  /// The platform reports the angle in radians; the native bridge converts it
+  /// to degrees and clamps it to that range.
   final double? angleDegrees;
 
   /// Hardware-reserved areas of the display: the fold and any camera cutouts.

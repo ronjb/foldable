@@ -256,6 +256,57 @@ void main() {
     expect(seen.spansDivision, isFalse);
   });
 
+  testWidgets('fold geometry follows the builder as it scrolls', (
+    WidgetTester tester,
+  ) async {
+    // Scrolling moves the builder without rebuilding it, but its fold rects
+    // must stay in its own coordinates.
+    final StreamController<FoldableData> feed =
+        StreamController<FoldableData>.broadcast();
+    addTearDown(feed.close);
+    final ScrollController scroll = ScrollController();
+    addTearDown(scroll.dispose);
+
+    late FoldInfo seen;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FoldableProvider(
+          debugData: feed.stream,
+          child: ListView(
+            controller: scroll,
+            children: <Widget>[
+              const SizedBox(height: 300),
+              SizedBox(
+                height: 400,
+                child: FoldAwareBuilder(
+                  builder:
+                      (BuildContext context, BoxConstraints c, FoldInfo fold) {
+                        seen = fold;
+                        return const SizedBox.expand();
+                      },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await pushData(
+      tester,
+      feed,
+      dataFor(status: HingeStatus.partiallyOpen, angle: 90),
+    );
+    await tester.pump();
+    // The fold starts at the top of the screen, 300pt above the builder.
+    expect(seen.divisionRect!.top, -300);
+
+    scroll.jumpTo(100);
+    await tester.pump();
+    await tester.pump();
+
+    expect(seen.divisionRect!.top, -200);
+  });
+
   testWidgets('provides layout constraints alongside fold state', (
     WidgetTester tester,
   ) async {

@@ -130,6 +130,28 @@ void main() {
       });
       expect(data.regions, isEmpty);
     });
+
+    test('mistyped fields fall back instead of throwing', () {
+      final FoldableData data = FoldableCodec.decodeSnapshot(<Object?, Object?>{
+        'isFoldable': 'yes',
+        'strategy': 42,
+        'angleDegrees': '90',
+        'regions': <Object?>[
+          <String, Object?>{
+            'kind': 'division',
+            'active': true,
+            'left': 'x',
+            'top': 0,
+            'width': 40,
+            'height': 890,
+          },
+        ],
+      });
+      expect(data.isFoldable, isFalse);
+      expect(data.capabilities.strategy, 'none');
+      expect(data.angleDegrees, isNull);
+      expect(data.regions, isEmpty);
+    });
   });
 
   group('wire round trip', () {

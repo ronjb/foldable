@@ -135,6 +135,40 @@ class FoldAwareBuilder extends StatefulWidget {
 
 class _FoldAwareBuilderState extends State<FoldAwareBuilder> {
   Offset _origin = Offset.zero;
+  ScrollPosition? _scrollPosition;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Scrolling moves this builder without rebuilding it, so its position is
+    // also re-read whenever the enclosing scroll view scrolls.
+    final ScrollPosition? position = Scrollable.maybeOf(context)?.position;
+    if (position != _scrollPosition) {
+      _scrollPosition?.removeListener(_scheduleOriginSync);
+      _scrollPosition = position?..addListener(_scheduleOriginSync);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollPosition?.removeListener(_scheduleOriginSync);
+    super.dispose();
+  }
+
+  /// Re-reads this subtree's position once the current frame is laid out,
+  /// when there is fold geometry for it to place.
+  void _scheduleOriginSync() {
+    final bool hasRegions =
+        context
+            .getInheritedWidgetOfExactType<DuoMediaQuery>()
+            ?.data
+            .regions
+            .isNotEmpty ??
+        false;
+    if (hasRegions) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncOrigin());
+    }
+  }
 
   /// Re-reads this subtree's position after layout.
   ///
@@ -142,12 +176,11 @@ class _FoldAwareBuilderState extends State<FoldAwareBuilder> {
   /// anywhere in the tree; without this the fold would be drawn in the wrong
   /// place for any inset subtree.
   void _syncOrigin() {
+    if (!mounted) return;
     final RenderObject? box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return;
     final Offset origin = box.localToGlobal(Offset.zero);
-    if (origin != _origin && mounted) {
-      setState(() => _origin = origin);
-    }
+    if (origin != _origin) setState(() => _origin = origin);
   }
 
   Iterable<Rect> _toLocal(
@@ -171,7 +204,7 @@ class _FoldAwareBuilderState extends State<FoldAwareBuilder> {
     }
     final FoldableData data = scope?.data ?? FoldableData.unsupported;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncOrigin());
+    _scheduleOriginSync();
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {

@@ -33,6 +33,10 @@ class MethodChannelFoldable extends FoldablePlatform {
     try {
       final Map<Object?, Object?>? raw = await methodChannel
           .invokeMapMethod<Object?, Object?>('getSnapshot');
+      assert(() {
+        _debugCheckWireVersion(raw?['wireVersion']);
+        return true;
+      }());
       return FoldableCodec.decodeSnapshot(raw);
     } on MissingPluginException {
       // Plugin not registered: another platform, or a hot-restart race.
@@ -154,5 +158,22 @@ class MethodChannelFoldable extends FoldablePlatform {
     } on PlatformException catch (e) {
       return <String, Object?>{'error': e.message ?? e.code};
     }
+  }
+
+  /// Reports a native plugin that speaks another wire version, which happens
+  /// when a hot restart runs this Dart code against native code from another
+  /// version of the package. Decoding carries on regardless.
+  static void _debugCheckWireVersion(Object? version) {
+    if (version == null || version == FoldableCodec.wireVersion) return;
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: FlutterError(
+          'foldable: the iOS plugin speaks wire version $version, but this '
+          'Dart code speaks ${FoldableCodec.wireVersion}. Rebuild the app so '
+          'both come from the same version of the package.',
+        ),
+        library: 'foldable',
+      ),
+    );
   }
 }
