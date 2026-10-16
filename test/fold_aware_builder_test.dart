@@ -177,6 +177,85 @@ void main() {
     expect(seen.last, HingeStatus.fullyOpen);
   });
 
+  testWidgets('angle-only changes do not rebuild', (WidgetTester tester) async {
+    final StreamController<FoldableData> feed =
+        StreamController<FoldableData>.broadcast();
+    addTearDown(feed.close);
+
+    int builds = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FoldableProvider(
+          debugData: feed.stream,
+          child: FoldAwareBuilder(
+            builder: (BuildContext context, BoxConstraints c, FoldInfo fold) {
+              builds++;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+    await pushData(
+      tester,
+      feed,
+      dataFor(status: HingeStatus.partiallyOpen, angle: 90),
+    );
+    final int baseline = builds;
+
+    // Each step clears the angle threshold, so angle readers do rebuild.
+    for (int step = 1; step <= 10; step++) {
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 90.0 + step),
+      );
+    }
+
+    expect(builds, baseline);
+  });
+
+  testWidgets('a fold outside the builder does not span it', (
+    WidgetTester tester,
+  ) async {
+    // The fold runs down x = 293 to 333; this builder covers x = 0 to 200.
+    final StreamController<FoldableData> feed =
+        StreamController<FoldableData>.broadcast();
+    addTearDown(feed.close);
+
+    late FoldInfo seen;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FoldableProvider(
+          debugData: feed.stream,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 200,
+              height: 200,
+              child: FoldAwareBuilder(
+                builder:
+                    (BuildContext context, BoxConstraints c, FoldInfo fold) {
+                      seen = fold;
+                      return const SizedBox.expand();
+                    },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await pushData(
+      tester,
+      feed,
+      dataFor(status: HingeStatus.partiallyOpen, angle: 90),
+    );
+
+    expect(seen.isPartiallyOpen, isTrue);
+    expect(seen.divisionRects, isEmpty);
+    expect(seen.spansDivision, isFalse);
+  });
+
   testWidgets('provides layout constraints alongside fold state', (
     WidgetTester tester,
   ) async {

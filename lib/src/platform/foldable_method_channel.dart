@@ -57,10 +57,23 @@ class MethodChannelFoldable extends FoldablePlatform {
   Stream<FoldableData> _createEventStream() {
     late final StreamController<FoldableData> controller;
     StreamSubscription<dynamic>? subscription;
+    FoldableData? latest;
+
+    void emit(FoldableData data) {
+      latest = data;
+      controller.add(data);
+    }
 
     Future<void> start() async {
       final FoldableData snapshot = await getSnapshot();
-      if (controller.isClosed) return;
+      // While the snapshot was in flight the last listener may have left, or
+      // a later start() may already have subscribed. Subscribing anyway would
+      // leave the platform streaming to nobody, or streaming twice.
+      if (controller.isClosed ||
+          !controller.hasListener ||
+          subscription != null) {
+        return;
+      }
 
       // A device only reveals that it has no hinge through an update, so the
       // platform answers `unknown` until the first one lands. Closing on that
@@ -71,16 +84,12 @@ class MethodChannelFoldable extends FoldablePlatform {
         return;
       }
 
-      // Replay the current state so a late listener is not left blank until
-      // the hinge next moves.
-      controller.add(snapshot);
+      emit(snapshot);
 
       subscription = eventChannel.receiveBroadcastStream().listen(
         (Object? event) {
           if (event is Map && !controller.isClosed) {
-            controller.add(
-              FoldableCodec.decodeSnapshot(event.cast<Object?, Object?>()),
-            );
+            emit(FoldableCodec.decodeSnapshot(event.cast<Object?, Object?>()));
           }
         },
         onError: (Object error, StackTrace stack) {
@@ -107,10 +116,26 @@ class MethodChannelFoldable extends FoldablePlatform {
       onCancel: () async {
         await subscription?.cancel();
         subscription = null;
+        latest = null;
       },
     );
 
-    return controller.stream;
+    // Replay the current state to every listener, so a late one is not left
+    // blank until the hinge next moves. The controller's onListen only runs
+    // for the first listener, so the replay happens here instead.
+    return Stream<FoldableData>.multi((
+      MultiStreamController<FoldableData> listener,
+    ) {
+      final FoldableData? current = latest;
+      if (current != null) listener.add(current);
+      final StreamSubscription<FoldableData> forwarding = controller.stream
+          .listen(
+            listener.add,
+            onError: listener.addError,
+            onDone: listener.close,
+          );
+      listener.onCancel = forwarding.cancel;
+    }, isBroadcast: true);
   }
 
   /// Drops the cached stream so a test can start from a clean slate.

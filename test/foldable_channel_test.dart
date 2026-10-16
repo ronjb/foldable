@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foldable/foldable.dart';
@@ -57,6 +59,24 @@ void main() {
       const MethodChannel(kFoldableEventChannel),
       (MethodCall call) async => null,
     );
+  }
+
+  /// Holds every snapshot reply until [reply] completes, and records the
+  /// EventChannel handshake so a test can see whether native events started.
+  List<String> mockSlowSnapshot(Completer<Object?> reply) {
+    final List<String> handshake = <String>[];
+    messenger
+      ..setMockMethodCallHandler(
+        const MethodChannel(kFoldableMethodChannel),
+        (MethodCall call) => reply.future,
+      )
+      ..setMockMethodCallHandler(const MethodChannel(kFoldableEventChannel), (
+        MethodCall call,
+      ) async {
+        handshake.add(call.method);
+        return null;
+      });
+    return handshake;
   }
 
   Future<void> emit(Map<String, Object?> event) =>
@@ -143,6 +163,58 @@ void main() {
       expect(received, hasLength(1));
       expect(received.single.angleDegrees, 97.4);
     });
+
+    test('a later listener also receives the current snapshot', () async {
+      mockMethods(payload(isFoldable: true));
+      mockEventHandshake();
+
+      platform.events.listen((_) {});
+      await pumpEventQueue();
+
+      final List<FoldableData> later = <FoldableData>[];
+      platform.events.listen(later.add);
+      await pumpEventQueue();
+
+      expect(later, hasLength(1));
+      expect(later.single.angleDegrees, 97.4);
+    });
+
+    test('a listener that leaves before the snapshot starts nothing', () async {
+      final Completer<Object?> reply = Completer<Object?>();
+      final List<String> handshake = mockSlowSnapshot(reply);
+
+      final StreamSubscription<FoldableData> early = platform.events.listen(
+        (_) {},
+      );
+      await pumpEventQueue();
+      await early.cancel();
+      reply.complete(payload(isFoldable: true));
+      await pumpEventQueue();
+
+      expect(handshake, isEmpty);
+    });
+
+    test(
+      'a listener replacing one that left subscribes natively once',
+      () async {
+        final Completer<Object?> reply = Completer<Object?>();
+        final List<String> handshake = mockSlowSnapshot(reply);
+
+        final StreamSubscription<FoldableData> early = platform.events.listen(
+          (_) {},
+        );
+        await pumpEventQueue();
+        await early.cancel();
+        final List<FoldableData> received = <FoldableData>[];
+        platform.events.listen(received.add);
+        await pumpEventQueue();
+        reply.complete(payload(isFoldable: true));
+        await pumpEventQueue();
+
+        expect(handshake, <String>['listen']);
+        expect(received, hasLength(1));
+      },
+    );
 
     test('forwards live events after the replay', () async {
       mockMethods(payload(isFoldable: true));

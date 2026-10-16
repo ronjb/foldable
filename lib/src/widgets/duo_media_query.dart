@@ -112,6 +112,9 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
 
   /// How far the angle must move, in degrees, before [angleOf] dependents
   /// rebuild.
+  ///
+  /// Applied by `FoldableProvider`, which only publishes a new angle once it
+  /// has moved this far from the last one it published.
   static const double angleRebuildThresholdDegrees = 0.5;
 
   @override
@@ -127,10 +130,7 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
       (FoldableAspect aspect) => switch (aspect) {
         FoldableAspect.capabilities => data.capabilities != old.capabilities,
         FoldableAspect.status => data.status != old.status,
-        FoldableAspect.angle => _angleChanged(
-          data.angleDegrees,
-          old.angleDegrees,
-        ),
+        FoldableAspect.angle => data.angleDegrees != old.angleDegrees,
         // Compared with listEquals, not `!=`. MediaQuery itself compares its
         // display feature list by identity, which makes a freshly built list
         // rebuild every dependent each frame; this does not repeat that.
@@ -144,11 +144,6 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
               data.verticalSizeClass != old.verticalSizeClass,
       },
     );
-  }
-
-  static bool _angleChanged(double? current, double? previous) {
-    if (current == null || previous == null) return current != previous;
-    return (current - previous).abs() > angleRebuildThresholdDegrees;
   }
 }
 

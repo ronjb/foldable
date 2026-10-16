@@ -95,4 +95,103 @@ void main() {
 
     expect(_ProbeState.initCount, 1);
   });
+
+  testWidgets('a resize keeps simulated debugData state', (
+    WidgetTester tester,
+  ) async {
+    // A resize re-reads size classes from the platform. While debugData drives
+    // the provider, the platform's answer must not replace the simulated one.
+    final _FakePlatform platform = _FakePlatform()
+      ..reply.complete(dataFor(HingeStatus.closed));
+    final StreamController<FoldableData> feed =
+        StreamController<FoldableData>.broadcast();
+    addTearDown(feed.close);
+    addTearDown(tester.view.reset);
+
+    HingeStatus? status;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FoldableProvider(
+          platform: platform,
+          debugData: feed.stream,
+          child: Builder(
+            builder: (BuildContext context) {
+              status = DuoMediaQuery.statusOf(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    await _push(tester, feed, HingeStatus.partiallyOpen);
+
+    tester.view.physicalSize = const Size(1200, 900);
+    await tester.pump();
+    await tester.pump();
+
+    expect(status, HingeStatus.partiallyOpen);
+  });
+
+  testWidgets('a platform reply after switching to debugData is dropped', (
+    WidgetTester tester,
+  ) async {
+    // The first platform snapshot is still in flight when the provider is
+    // switched to debugData. Applied late, it would also subscribe to the old
+    // platform, whose events would then overwrite the simulated state.
+    final _FakePlatform platform = _FakePlatform();
+    final StreamController<FoldableData> feed =
+        StreamController<FoldableData>.broadcast();
+    addTearDown(feed.close);
+
+    HingeStatus? status;
+    Future<void> pump({Stream<FoldableData>? debugData}) => tester.pumpWidget(
+      MaterialApp(
+        home: FoldableProvider(
+          platform: platform,
+          debugData: debugData,
+          child: Builder(
+            builder: (BuildContext context) {
+              status = DuoMediaQuery.statusOf(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+
+    await pump();
+    await pump(debugData: feed.stream);
+    platform.reply.complete(dataFor(HingeStatus.closed));
+    await _push(tester, feed, HingeStatus.partiallyOpen);
+    platform.controller.add(dataFor(HingeStatus.fullyOpen));
+    await tester.pump();
+    await tester.pump();
+
+    expect(platform.controller.hasListener, isFalse);
+    expect(status, HingeStatus.partiallyOpen);
+  });
+}
+
+/// Pushes a snapshot and lets the resulting setState reach a build.
+Future<void> _push(
+  WidgetTester tester,
+  StreamController<FoldableData> feed,
+  HingeStatus status,
+) async {
+  feed.add(dataFor(status));
+  await tester.pump();
+  await tester.pump();
+}
+
+/// A platform whose snapshot reply the test releases by hand.
+class _FakePlatform extends FoldablePlatform {
+  final Completer<FoldableData> reply = Completer<FoldableData>();
+  final StreamController<FoldableData> controller =
+      StreamController<FoldableData>.broadcast();
+
+  @override
+  Future<FoldableData> getSnapshot() => reply.future;
+
+  @override
+  Stream<FoldableData> get events => controller.stream;
 }

@@ -303,6 +303,79 @@ void main() {
 
       expect(angleBuilds, baseline);
     });
+
+    testWidgets('a slow sweep of sub-threshold steps still reaches readers', (
+      WidgetTester tester,
+    ) async {
+      // Each step is below the threshold, but together they move the hinge
+      // 30 degrees. Measured from the previous reading instead of the last
+      // published one, no single step would ever rebuild the reader.
+      final StreamController<FoldableData> feed =
+          StreamController<FoldableData>.broadcast();
+      addTearDown(feed.close);
+
+      double? seen;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoldableProvider(
+            debugData: feed.stream,
+            child: Builder(
+              builder: (BuildContext context) {
+                seen = DuoMediaQuery.angleOf(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      for (int step = 0; step <= 100; step++) {
+        await pushData(
+          tester,
+          feed,
+          dataFor(status: HingeStatus.partiallyOpen, angle: 90 + step * 0.3),
+        );
+      }
+
+      expect(seen, closeTo(120, DuoMediaQuery.angleRebuildThresholdDegrees));
+    });
+
+    testWidgets('a posture change publishes the exact angle', (
+      WidgetTester tester,
+    ) async {
+      final StreamController<FoldableData> feed =
+          StreamController<FoldableData>.broadcast();
+      addTearDown(feed.close);
+
+      double? seen;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoldableProvider(
+            debugData: feed.stream,
+            child: Builder(
+              builder: (BuildContext context) {
+                seen = DuoMediaQuery.angleOf(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.partiallyOpen, angle: 179.7),
+      );
+      // Within the threshold of the last angle, but the posture changed.
+      await pushData(
+        tester,
+        feed,
+        dataFor(status: HingeStatus.fullyOpen, angle: 180),
+      );
+
+      expect(seen, 180);
+    });
   });
 
   group('without a provider', () {

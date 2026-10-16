@@ -36,12 +36,14 @@ class FoldInfo {
   /// The current fold posture.
   final HingeStatus status;
 
-  /// The hinge angle in degrees, refreshed when the posture changes.
+  /// The hinge angle in degrees, as of the builder's last rebuild.
   ///
-  /// For per-frame values use `Foldable.hingeAngleStream`.
+  /// Angle changes alone do not rebuild a [FoldAwareBuilder]. For per-frame
+  /// values use `Foldable.hingeAngleStream`.
   final double? angleDegrees;
 
-  /// Active fold areas, in the builder's local coordinate space.
+  /// Active fold areas that overlap the builder, in its local coordinate
+  /// space.
   final List<Rect> divisionRects;
 
   /// Active camera cutouts, in the builder's local coordinate space.
@@ -148,53 +150,73 @@ class _FoldAwareBuilderState extends State<FoldAwareBuilder> {
     }
   }
 
-  List<Rect> _toLocal(Iterable<ReservedRegion> regions) => regions
-      .where((ReservedRegion r) => r.isActive)
-      .map((ReservedRegion r) => r.bounds.shift(-_origin))
-      .toList(growable: false);
+  Iterable<Rect> _toLocal(
+    List<ReservedRegion> regions,
+    ReservedRegionKind kind,
+  ) => regions
+      .where((ReservedRegion r) => r.kind == kind && r.isActive)
+      .map((ReservedRegion r) => r.bounds.shift(-_origin));
 
   @override
   Widget build(BuildContext context) {
-    final FoldableData data = DuoMediaQuery.of(context);
+    // Depends on every aspect but the angle, which would otherwise rebuild the
+    // whole subtree on each hinge update. The angle is still read, as of this
+    // build.
+    DuoMediaQuery? scope;
+    for (final FoldableAspect aspect in _layoutAspects) {
+      scope = InheritedModel.inheritFrom<DuoMediaQuery>(
+        context,
+        aspect: aspect,
+      );
+    }
+    final FoldableData data = scope?.data ?? FoldableData.unsupported;
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncOrigin());
 
-    final FoldInfo fold = data.isFoldable
-        ? FoldInfo(
-            isFoldable: true,
-            status: data.status,
-            angleDegrees: data.angleDegrees,
-            horizontalSizeClass: data.horizontalSizeClass,
-            verticalSizeClass: data.verticalSizeClass,
-            // Only while partially open: the region's isActive flag lags the
-            // hinge and can stay true after the device has been laid flat.
-            divisionRects: data.status == HingeStatus.partiallyOpen
-                ? _toLocal(
-                    data.regions.where(
-                      (ReservedRegion r) =>
-                          r.kind == ReservedRegionKind.division,
-                    ),
-                  )
-                : const <Rect>[],
-            occlusionRects: _toLocal(
-              data.regions.where(
-                (ReservedRegion r) => r.kind == ReservedRegionKind.occlusion,
-              ),
-            ),
-          )
-        : FoldInfo(
-            isFoldable: false,
-            status: HingeStatus.unknown,
-            angleDegrees: null,
-            divisionRects: const <Rect>[],
-            occlusionRects: const <Rect>[],
-            horizontalSizeClass: data.horizontalSizeClass,
-            verticalSizeClass: data.verticalSizeClass,
-          );
-
     return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) =>
-          widget.builder(context, constraints, fold),
+      builder: (BuildContext context, BoxConstraints constraints) {
+        // A fold elsewhere on the screen does not cross this builder.
+        final Rect area = Offset.zero & constraints.biggest;
+        final FoldInfo fold = data.isFoldable
+            ? FoldInfo(
+                isFoldable: true,
+                status: data.status,
+                angleDegrees: data.angleDegrees,
+                horizontalSizeClass: data.horizontalSizeClass,
+                verticalSizeClass: data.verticalSizeClass,
+                // Only while partially open: the region's isActive flag lags
+                // the hinge and can stay true after the device has been laid
+                // flat.
+                divisionRects: data.status == HingeStatus.partiallyOpen
+                    ? _toLocal(
+                        data.regions,
+                        ReservedRegionKind.division,
+                      ).where(area.overlaps).toList(growable: false)
+                    : const <Rect>[],
+                occlusionRects: _toLocal(
+                  data.regions,
+                  ReservedRegionKind.occlusion,
+                ).toList(growable: false),
+              )
+            : FoldInfo(
+                isFoldable: false,
+                status: HingeStatus.unknown,
+                angleDegrees: null,
+                divisionRects: const <Rect>[],
+                occlusionRects: const <Rect>[],
+                horizontalSizeClass: data.horizontalSizeClass,
+                verticalSizeClass: data.verticalSizeClass,
+              );
+        return widget.builder(context, constraints, fold);
+      },
     );
   }
 }
+
+/// The [DuoMediaQuery] aspects a [FoldAwareBuilder] rebuilds for.
+const List<FoldableAspect> _layoutAspects = <FoldableAspect>[
+  FoldableAspect.capabilities,
+  FoldableAspect.status,
+  FoldableAspect.regions,
+  FoldableAspect.sizeClass,
+];

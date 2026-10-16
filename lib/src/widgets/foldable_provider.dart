@@ -63,6 +63,11 @@ class _FoldableProviderState extends State<FoldableProvider> {
   bool _warnedAboutUpstream = false;
   Size? _lastSize;
 
+  /// Identifies the current [_start], so that a platform reply arriving after
+  /// the provider switched to another platform or to [FoldableProvider.debugData]
+  /// is dropped instead of overwriting the new source.
+  Object? _session;
+
   FoldablePlatform get _platform =>
       widget.platform ?? FoldablePlatform.instance;
 
@@ -98,6 +103,7 @@ class _FoldableProviderState extends State<FoldableProvider> {
   }
 
   void _start() {
+    final Object session = _session = Object();
     if (widget.debugData != null) {
       _subscription = widget.debugData!.listen(_apply);
       return;
@@ -108,7 +114,7 @@ class _FoldableProviderState extends State<FoldableProvider> {
     // told apart from a missing plugin.
     unawaited(
       _platform.getSnapshot().then((FoldableData snapshot) {
-        if (!mounted) return;
+        if (!mounted || session != _session) return;
         _apply(snapshot);
         // The platform reports the absence of a hinge only through a hinge
         // update, so the first snapshot may still be `unknown`. Subscribe
@@ -134,9 +140,13 @@ class _FoldableProviderState extends State<FoldableProvider> {
   }
 
   void _refresh() {
+    // Simulated state must not be overwritten by the real platform's.
+    if (widget.debugData != null) return;
+
+    final Object? session = _session;
     unawaited(
       _platform.getSnapshot().then((FoldableData snapshot) {
-        if (mounted) _apply(snapshot);
+        if (mounted && session == _session) _apply(snapshot);
       }),
     );
   }
@@ -155,8 +165,31 @@ class _FoldableProviderState extends State<FoldableProvider> {
       if (!listEquals(features, _features)) {
         _features = features;
       }
-      _data = next.copyWith(displayFeatures: _features);
+      _data = next.copyWith(
+        displayFeatures: _features,
+        angleDegrees: _publishedAngle(next),
+      );
     });
+  }
+
+  /// The angle to publish for [next].
+  ///
+  /// Holds the last published angle until the new one moves more than
+  /// [DuoMediaQuery.angleRebuildThresholdDegrees] away from it, so angle
+  /// readers are not rebuilt by jitter. The threshold is measured from what
+  /// was published, not from the previous reading, so a slow fold made of many
+  /// small steps still gets through. A posture change always publishes the
+  /// exact angle, keeping the two consistent.
+  double? _publishedAngle(FoldableData next) {
+    final double? published = _data.angleDegrees;
+    final double? angle = next.angleDegrees;
+    if (angle == null || published == null || next.status != _data.status) {
+      return angle;
+    }
+    return (angle - published).abs() >
+            DuoMediaQuery.angleRebuildThresholdDegrees
+        ? angle
+        : published;
   }
 
   /// The bridge mode actually in force.
