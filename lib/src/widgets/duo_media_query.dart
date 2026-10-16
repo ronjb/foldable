@@ -5,6 +5,7 @@ import '../model/foldable_data.dart';
 import '../model/hinge_status.dart';
 import '../model/reserved_region.dart';
 import '../model/size_class.dart';
+import '../model/vertical_bar_edge.dart';
 
 /// The facets of [FoldableData] a widget can depend on individually.
 enum FoldableAspect {
@@ -25,6 +26,9 @@ enum FoldableAspect {
 
   /// The iOS size classes.
   sizeClass,
+
+  /// The iPhone Duo vertical bar.
+  verticalBar,
 }
 
 /// Exposes fold state to the widget tree.
@@ -102,6 +106,28 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
       )?.data.verticalSizeClass ??
       SizeClass.unspecified;
 
+  /// The edge where iOS places the vertical bar, rebuilding only when the
+  /// vertical bar changes.
+  static VerticalBarEdge verticalBarEdgeOf(BuildContext context) =>
+      InheritedModel.inheritFrom<DuoMediaQuery>(
+        context,
+        aspect: FoldableAspect.verticalBar,
+      )?.data.verticalBarEdge ??
+      VerticalBarEdge.unspecified;
+
+  /// The part of the vertical bar free for your own bar content, or
+  /// [Rect.zero] while there is none, rebuilding only when the vertical bar
+  /// changes.
+  ///
+  /// In the view's coordinates, so position it from a widget that fills the
+  /// screen, such as a [Stack] around the `Scaffold`.
+  static Rect verticalBarFrameOf(BuildContext context) =>
+      InheritedModel.inheritFrom<DuoMediaQuery>(
+        context,
+        aspect: FoldableAspect.verticalBar,
+      )?.data.verticalBarFrame ??
+      Rect.zero;
+
   /// Whether the device has a hinge, rebuilding only when that changes.
   static bool isFoldableOf(BuildContext context) =>
       InheritedModel.inheritFrom<DuoMediaQuery>(
@@ -142,6 +168,9 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
         FoldableAspect.sizeClass =>
           data.horizontalSizeClass != old.horizontalSizeClass ||
               data.verticalSizeClass != old.verticalSizeClass,
+        FoldableAspect.verticalBar =>
+          data.verticalBarEdge != old.verticalBarEdge ||
+              data.verticalBarFrame != old.verticalBarFrame,
       },
     );
   }

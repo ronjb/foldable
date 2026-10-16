@@ -5,6 +5,7 @@ import '../model/foldable_data.dart';
 import '../model/hinge_status.dart';
 import '../model/reserved_region.dart';
 import '../model/size_class.dart';
+import '../model/vertical_bar_edge.dart';
 
 /// Decodes platform channel payloads into models.
 ///
@@ -39,6 +40,8 @@ abstract final class FoldableCodec {
       regions: _regions(raw['regions']),
       horizontalSizeClass: SizeClass.fromWire(raw['horizontalSizeClass']),
       verticalSizeClass: SizeClass.fromWire(raw['verticalSizeClass']),
+      verticalBarEdge: VerticalBarEdge.fromWire(raw['verticalBarEdge']),
+      verticalBarFrame: _rect(raw['verticalBar']) ?? Rect.zero,
       // Bridging is a pure-Dart decision; the platform never supplies these.
       displayFeatures: const [],
     );
@@ -50,23 +53,32 @@ abstract final class FoldableCodec {
     final List<ReservedRegion> out = <ReservedRegion>[];
     for (final Object? entry in raw) {
       if (entry is! Map) continue;
-      final double? left = _double(entry['left']);
-      final double? top = _double(entry['top']);
-      final double? width = _double(entry['width']);
-      final double? height = _double(entry['height']);
-      if (left == null || top == null || width == null || height == null) {
-        continue;
-      }
+      final Rect? bounds = _rect(entry);
+      if (bounds == null) continue;
       out.add(
         ReservedRegion(
           kind: ReservedRegionKind.fromWire(entry['kind']),
-          // Points map 1:1 to logical pixels on iOS, so no scaling.
-          bounds: Rect.fromLTWH(left, top, width, height),
+          bounds: bounds,
           isActive: _bool(entry['active']),
         ),
       );
     }
     return List<ReservedRegion>.unmodifiable(out);
+  }
+
+  /// Decodes a `left`/`top`/`width`/`height` map, or `null` when it is not
+  /// one.
+  static Rect? _rect(Object? raw) {
+    if (raw is! Map) return null;
+    final double? left = _double(raw['left']);
+    final double? top = _double(raw['top']);
+    final double? width = _double(raw['width']);
+    final double? height = _double(raw['height']);
+    if (left == null || top == null || width == null || height == null) {
+      return null;
+    }
+    // Points map 1:1 to logical pixels on iOS, so no scaling.
+    return Rect.fromLTWH(left, top, width, height);
   }
 
   static bool _bool(Object? value) => value is bool ? value : false;

@@ -1,4 +1,4 @@
-import 'dart:ui' show DisplayFeature;
+import 'dart:ui' show DisplayFeature, Rect;
 
 import 'package:flutter/foundation.dart';
 
@@ -6,6 +6,7 @@ import 'foldable_capabilities.dart';
 import 'hinge_status.dart';
 import 'reserved_region.dart';
 import 'size_class.dart';
+import 'vertical_bar_edge.dart';
 
 /// An atomic snapshot of everything the platform knows about the fold.
 ///
@@ -24,6 +25,8 @@ class FoldableData {
     required this.displayFeatures,
     this.horizontalSizeClass = SizeClass.unspecified,
     this.verticalSizeClass = SizeClass.unspecified,
+    this.verticalBarEdge = VerticalBarEdge.unspecified,
+    this.verticalBarFrame = Rect.zero,
   });
 
   /// The value used on devices without a hinge, on non-iOS platforms, and
@@ -68,6 +71,22 @@ class FoldableData {
   /// The vertical size class iOS reports for this window.
   final SizeClass verticalSizeClass;
 
+  /// The edge where iOS places the vertical bar, or
+  /// [VerticalBarEdge.unspecified] where there is none.
+  ///
+  /// This is the system's preferred edge whether or not the bar is showing;
+  /// [verticalBarFrame] is empty while it is not.
+  final VerticalBarEdge verticalBarEdge;
+
+  /// The part of the vertical bar free for your own bar content, in logical
+  /// pixels, or [Rect.zero] while there is no vertical bar.
+  ///
+  /// This is where UIKit lays out a bar on that edge: below the status bar,
+  /// above the home indicator, and as wide as the bar's safe area inset. It is
+  /// centred on the status bar rather than on the inset, so keep narrower
+  /// content centred in it to line up with the status bar.
+  final Rect verticalBarFrame;
+
   /// Whether this device physically has a hinge.
   bool get isFoldable => capabilities.isFoldable;
 
@@ -92,6 +111,8 @@ class FoldableData {
     List<DisplayFeature>? displayFeatures,
     SizeClass? horizontalSizeClass,
     SizeClass? verticalSizeClass,
+    VerticalBarEdge? verticalBarEdge,
+    Rect? verticalBarFrame,
   }) {
     return FoldableData(
       capabilities: capabilities ?? this.capabilities,
@@ -101,6 +122,8 @@ class FoldableData {
       displayFeatures: displayFeatures ?? this.displayFeatures,
       horizontalSizeClass: horizontalSizeClass ?? this.horizontalSizeClass,
       verticalSizeClass: verticalSizeClass ?? this.verticalSizeClass,
+      verticalBarEdge: verticalBarEdge ?? this.verticalBarEdge,
+      verticalBarFrame: verticalBarFrame ?? this.verticalBarFrame,
     );
   }
 
@@ -113,6 +136,8 @@ class FoldableData {
           other.angleDegrees == angleDegrees &&
           other.horizontalSizeClass == horizontalSizeClass &&
           other.verticalSizeClass == verticalSizeClass &&
+          other.verticalBarEdge == verticalBarEdge &&
+          other.verticalBarFrame == verticalBarFrame &&
           listEquals(other.regions, regions) &&
           listEquals(other.displayFeatures, displayFeatures);
 
@@ -123,6 +148,8 @@ class FoldableData {
     angleDegrees,
     horizontalSizeClass,
     verticalSizeClass,
+    verticalBarEdge,
+    verticalBarFrame,
     Object.hashAll(regions),
     Object.hashAll(displayFeatures),
   );

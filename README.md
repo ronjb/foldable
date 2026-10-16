@@ -41,6 +41,8 @@ hinge, and by default changes no framework behaviour whatsoever.
   rebuilds only the widgets that care about the fold
 - **iOS size classes**: the signal the system itself lays out from, bridged to
   Dart. Works on every iOS device, not just foldables
+- **The vertical bar**: where the status bar's vertical bar leaves room for
+  your own buttons
 - **Optional** `MediaQuery.displayFeatures` bridging, off by default
 
 ## Install
@@ -129,6 +131,44 @@ disturbed while the angle sweeps. For per-frame effects, use
 `Foldable.hingeAngleStream` directly and keep the element tree out of it. That
 is also Apple's guidance for iPhone Duo: drive effects and interactions from
 the raw angle, and drive layout from posture and size classes.
+
+### The vertical bar
+
+Built against the iOS 27.1 SDK, an app on iPhone Duo gets a vertical bar along
+one side of the window. The status bar turns vertical and moves into it, and
+native apps move their toolbar and tab bar buttons into it as well. Flutter
+sees only the safe area inset the system adds for the bar, so content that
+ignores `MediaQuery.padding` runs under the status bar.
+
+`DuoMediaQuery.verticalBarFrameOf` gives the part of the bar free for your own
+buttons: below the status bar, above the home indicator, and centred on the
+status bar. It is `Rect.zero` wherever there is no vertical bar. The frame is in
+the view's coordinates, so position it from a `Stack` that fills the screen:
+
+```dart
+final Rect bar = DuoMediaQuery.verticalBarFrameOf(context);
+return Stack(
+  children: [
+    Scaffold(body: SafeArea(child: content)),
+    if (!bar.isEmpty)
+      Positioned.fromRect(rect: bar, child: Column(children: buttons)),
+  ],
+);
+```
+
+Measured on the iPhone Duo simulator, it is centred 48pt in from the trailing
+edge on both displays:
+
+| Display | Window | Vertical bar frame |
+|---|---|---|
+| Cover | 466x678pt | 84x470pt, from 174pt down |
+| Inner, fully open | 951x669pt | 84x511pt, from 124pt down |
+
+It is UIKit's own layout region for a bar on that edge
+(`UIViewLayoutRegion`), as wide as the bar's safe area inset; keep narrower
+content centred in it to line up with the status bar.
+`DuoMediaQuery.verticalBarEdgeOf` says which edge the system uses. The example
+app tints the frame and shows its size, so you can see the space in each pose.
 
 ## The `MediaQuery` bridge is opt-in, and here is why
 

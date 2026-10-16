@@ -62,6 +62,7 @@ class _FoldableProviderState extends State<FoldableProvider> {
   AppLifecycleListener? _lifecycle;
   bool _warnedAboutUpstream = false;
   Size? _lastSize;
+  EdgeInsets? _lastViewPadding;
 
   /// Identifies the current [_start], so that a platform reply arriving after
   /// the provider switched to another platform or to [FoldableProvider.debugData]
@@ -83,11 +84,16 @@ class _FoldableProviderState extends State<FoldableProvider> {
     // Size classes change without the hinge moving: entering Split View,
     // rotating, or opening the device. The event stream only runs on hardware
     // that has a hinge, so the window size is what tells us to re-read them.
+    // The vertical bar can come and go without the size changing, but not
+    // without the safe area changing.
     final Size size = MediaQuery.sizeOf(context);
-    if (_lastSize != null && size != _lastSize) {
+    final EdgeInsets viewPadding = MediaQuery.viewPaddingOf(context);
+    if (_lastSize != null &&
+        (size != _lastSize || viewPadding != _lastViewPadding)) {
       _refresh();
     }
     _lastSize = size;
+    _lastViewPadding = viewPadding;
   }
 
   @override

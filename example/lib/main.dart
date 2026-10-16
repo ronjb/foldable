@@ -150,39 +150,116 @@ class _HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('foldable'),
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Native API dump',
-            icon: const Icon(Icons.bug_report_outlined),
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute<void>(builder: (_) => const _DumpPage())),
+    final Rect bar = DuoMediaQuery.verticalBarFrameOf(context);
+    return Stack(
+      children: <Widget>[
+        Scaffold(
+          appBar: AppBar(
+            title: const Text('foldable'),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Native API dump',
+                icon: const Icon(Icons.bug_report_outlined),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const _DumpPage()),
+                ),
+              ),
+            ],
           ),
-        ],
+          // Keeps the cards out of the vertical bar, which is a side safe area
+          // inset on iPhone Duo.
+          body: SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                const _DeviceCard(),
+                const SizedBox(height: 16),
+                const _AngleCard(),
+                const SizedBox(height: 16),
+                const _FoldAwareCard(),
+                const SizedBox(height: 16),
+                _BridgeCard(
+                  bridgeMode: bridgeMode,
+                  onChanged: onBridgeModeChanged,
+                ),
+                const SizedBox(height: 16),
+                _SimulatorCard(
+                  simulate: simulate,
+                  status: status,
+                  angle: angle,
+                  onSimulateChanged: onSimulateChanged,
+                  onStatusChanged: onStatusChanged,
+                  onAngleChanged: onAngleChanged,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (!bar.isEmpty)
+          Positioned.fromRect(
+            rect: bar,
+            child: _VerticalBar(size: bar.size),
+          ),
+      ],
+    );
+  }
+}
+
+/// Example buttons in the iPhone Duo vertical bar, beneath the status bar.
+///
+/// Tinted, with its size at the bottom, so the space the bar leaves for
+/// buttons can be seen in every pose.
+class _VerticalBar extends StatelessWidget {
+  const _VerticalBar({required this.size});
+
+  final Size size;
+
+  static const List<(IconData, String)> _actions = <(IconData, String)>[
+    (Icons.add, 'Add'),
+    (Icons.search, 'Search'),
+    (Icons.share_outlined, 'Share'),
+    (Icons.settings_outlined, 'Settings'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer
+            .withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(size.width / 2),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          const _DeviceCard(),
-          const SizedBox(height: 16),
-          const _AngleCard(),
-          const SizedBox(height: 16),
-          const _FoldAwareCard(),
-          const SizedBox(height: 16),
-          _BridgeCard(bridgeMode: bridgeMode, onChanged: onBridgeModeChanged),
-          const SizedBox(height: 16),
-          _SimulatorCard(
-            simulate: simulate,
-            status: status,
-            angle: angle,
-            onSimulateChanged: onSimulateChanged,
-            onStatusChanged: onStatusChanged,
-            onAngleChanged: onAngleChanged,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          children: <Widget>[
+            for (final (IconData icon, String label) in _actions)
+              IconButton(
+                tooltip: label,
+                icon: Icon(icon),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (BuildContext context) => AlertDialog(
+                    title: Text(label),
+                    content: const Text('Tapped in the vertical bar.'),
+                    actions: <Widget>[
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const Spacer(),
+            Text(
+              '${size.width.round()}\n×\n${size.height.round()}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -196,6 +273,7 @@ class _DeviceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final FoldableData data = DuoMediaQuery.of(context);
     final FoldableCapabilities caps = data.capabilities;
+    final Rect bar = data.verticalBarFrame;
 
     return Card(
       child: Padding(
@@ -215,6 +293,12 @@ class _DeviceCard extends StatelessWidget {
             _Row('regions', '${data.regions.length}'),
             _Row('size class H', data.horizontalSizeClass.name),
             _Row('size class V', data.verticalSizeClass.name),
+            _Row('vertical bar', data.verticalBarEdge.name),
+            _Row(
+              'bar frame',
+              '${bar.width.round()}×${bar.height.round()} '
+                  'at ${bar.left.round()}, ${bar.top.round()}',
+            ),
           ],
         ),
       ),
@@ -546,11 +630,14 @@ class _DumpPage extends StatelessWidget {
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: SelectableText(
-                  const JsonEncoder.withIndent('  ').convert(snapshot.data),
-                  style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
+              return SafeArea(
+                bottom: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: SelectableText(
+                    const JsonEncoder.withIndent('  ').convert(snapshot.data),
+                    style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
+                  ),
                 ),
               );
             },

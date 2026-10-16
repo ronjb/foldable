@@ -124,6 +124,10 @@ enum ObjCRuntimeSupport {
     @convention(c) (AnyClass, Selector) -> Unmanaged<AnyObject>?
   private typealias InitWithObjectIMP =
     @convention(c) (AnyObject, Selector, AnyObject) -> Unmanaged<AnyObject>?
+  private typealias UIntAndFloatObjectIMP =
+    @convention(c) (AnyObject, Selector, UInt, CGFloat) -> Unmanaged<AnyObject>?
+  private typealias ObjectArgEdgeInsetsIMP =
+    @convention(c) (AnyObject, Selector, AnyObject) -> UIEdgeInsets
 
   /// Calls a method that takes one object, or one object plus an options mask,
   /// and returns an array.
@@ -162,6 +166,40 @@ enum ObjCRuntimeSupport {
     else { return nil }
     // A class accessor returns at +0.
     return (cls as AnyObject).perform(selector)?.takeUnretainedValue() as? NSObject
+  }
+
+  /// Calls a class method that takes an unsigned integer and a float and
+  /// returns an object, such as
+  /// `+[UIViewLayoutRegion layoutRegionForBarOnDirectionalEdge:extent:]`.
+  ///
+  /// Returns `nil` when the class or the selector is missing.
+  static func classObject(
+    _ className: String, _ selectorName: String, _ integer: UInt, _ float: CGFloat
+  ) -> NSObject? {
+    guard let cls = NSClassFromString(className) else { return nil }
+    let selector = NSSelectorFromString(selectorName)
+    guard let metaclass = object_getClass(cls),
+      class_respondsToSelector(metaclass, selector),
+      let imp = class_getMethodImplementation(metaclass, selector)
+    else { return nil }
+    let function = unsafeBitCast(imp, to: UIntAndFloatObjectIMP.self)
+    // A class factory method returns at +0.
+    return function(cls, selector, integer, float)?.takeUnretainedValue() as? NSObject
+  }
+
+  /// Calls a method that takes one object and returns `UIEdgeInsets`, such as
+  /// `-[UIView edgeInsetsForLayoutRegion:]`.
+  ///
+  /// Calling the implementation as a C function of the right type also gets
+  /// the struct return right on every architecture.
+  static func edgeInsets(
+    of object: NSObject, selector: Selector, object argument: AnyObject
+  ) -> UIEdgeInsets? {
+    guard object.responds(to: selector),
+      let imp = class_getMethodImplementation(type(of: object), selector)
+    else { return nil }
+    let function = unsafeBitCast(imp, to: ObjectArgEdgeInsetsIMP.self)
+    return function(object, selector, argument)
   }
 
   /// Allocates and initialises an object whose only initialiser takes one

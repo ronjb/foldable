@@ -1,3 +1,17 @@
+## Unreleased
+
+- **Vertical bar.** On iPhone Duo the status bar moves into a vertical bar
+  along one side of the window. `FoldableData.verticalBarFrame` and
+  `DuoMediaQuery.verticalBarFrameOf` give the part of it free for your own
+  buttons, below the status bar and above the home indicator, as UIKit lays
+  out a bar on that edge. `verticalBarEdge` and
+  `DuoMediaQuery.verticalBarEdgeOf` say which edge it is on. Both are read
+  through the Objective-C runtime, so older SDKs keep compiling.
+- `FoldableProvider` also re-reads the platform when the safe area changes,
+  since the vertical bar can come and go without the window resizing.
+- **Example app:** example buttons in the vertical bar, tinted and labelled
+  with the space available, and the cards no longer run under the status bar.
+
 ## 1.1.0
 
 - **Requires Flutter 3.47 and Dart 3.13.** Flutter 3.47 also raises its own

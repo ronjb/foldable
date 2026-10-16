@@ -153,6 +153,8 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
 
     let view = hostView
     let sizeClasses = FoldableTraits.sizeClasses(for: view)
+    let barEdge = FoldableVerticalBar.edge(for: view)
+    let bar = FoldableVerticalBar.frame(in: view, edge: barEdge)
 
     var payload: [String: Any] = [
       "wireVersion": Self.wireVersion,
@@ -166,6 +168,13 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
       "regions": regions(in: view).map { $0.toMap() },
       "horizontalSizeClass": sizeClasses.horizontal.rawValue,
       "verticalSizeClass": sizeClasses.vertical.rawValue,
+      "verticalBarEdge": barEdge.rawValue,
+      "verticalBar": [
+        "left": Double(bar.origin.x),
+        "top": Double(bar.origin.y),
+        "width": Double(bar.size.width),
+        "height": Double(bar.size.height),
+      ],
     ]
     payload["angleDegrees"] = reading?.angleDegrees ?? NSNull()
     return payload
