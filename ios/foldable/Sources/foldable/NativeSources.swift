@@ -5,7 +5,7 @@
   // Compiled only when FOLDABLE_NATIVE_API is defined, which requires an SDK
   // that declares the hinge APIs (iOS 27.1 / Xcode 27.1). Without the flag the
   // runtime sources carry the feature and the package still builds against
-  // older SDKs at an iOS 13 deployment target.
+  // older SDKs at an iOS 15 deployment target.
   //
   // To enable:
   //   * Package.swift    uncomment .define("FOLDABLE_NATIVE_API")

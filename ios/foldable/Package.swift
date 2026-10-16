@@ -35,7 +35,7 @@ let package = Package(
                 // The iPhone Duo hinge APIs ship in the iOS 27.1 SDK. Until
                 // this package is built with Xcode 27.1 or newer, the hinge is
                 // read through the Objective-C runtime instead, which keeps
-                // the deployment target at iOS 13 and keeps older toolchains
+                // the deployment target at iOS 15 and keeps older toolchains
                 // compiling.
                 //
                 // With Xcode 27.1+, uncomment the next line to compile

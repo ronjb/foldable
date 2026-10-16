@@ -7,10 +7,10 @@ import UIKit
 /// package is compiled against.
 ///
 /// The iPhone Duo hinge APIs ship in the iOS 27.1 SDK, but this package must
-/// keep compiling with older toolchains and keep running on iOS 13. No iOS 27
+/// keep compiling with older toolchains and keep running on iOS 15. No iOS 27
 /// type is ever named in Swift source here, only looked up as a string at
 /// runtime, so the compiler never sees an unknown symbol and the deployment
-/// target stays at 13.0.
+/// target stays at 15.0.
 ///
 /// Every lookup is guarded: a wrong guess yields `nil` and the feature turns
 /// itself off. Nothing here may crash on a device where the API is absent, or

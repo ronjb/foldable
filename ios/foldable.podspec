@@ -8,8 +8,9 @@ Pod::Spec.new do |s|
   s.summary          = 'Hinge angle and fold posture for the foldable iPhone.'
   s.description      = <<-DESC
 Exposes the iPhone Duo hinge angle, fold posture and reserved fold/camera
-regions to Flutter. Compiles against iOS 13 and older SDKs; on any device
-without a hinge it reports isFoldable: false and an empty stream.
+regions to Flutter. Runs on iOS 15 and later and compiles against SDKs that
+predate the hinge APIs; on any device without a hinge it reports
+isFoldable: false and an empty stream.
                        DESC
   s.homepage         = 'https://github.com/berkaycatak/foldable'
   s.license          = { :file => '../LICENSE' }
@@ -26,7 +27,7 @@ without a hinge it reports isFoldable: false and an empty stream.
     # With Xcode 27.1+, add '-D FOLDABLE_NATIVE_API' here to compile
     # NativeSources.swift against the real iOS 27.1 hinge types. Without it
     # the hinge is read through the Objective-C runtime, which is what keeps
-    # this podspec buildable on older toolchains at an iOS 13 deployment
+    # this podspec buildable on older toolchains at an iOS 15 deployment
     # target.
     'OTHER_SWIFT_FLAGS' => '$(inherited)',
   }

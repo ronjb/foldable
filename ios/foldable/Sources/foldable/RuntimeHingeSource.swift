@@ -24,7 +24,7 @@ import UIKit
 /// ```
 ///
 /// None of those types are named in Swift source here, so this file still
-/// compiles against older SDKs and keeps the deployment target at iOS 13. On a
+/// compiles against older SDKs and keeps the deployment target at iOS 15. On a
 /// device without the API the class lookup fails and the source reports that it
 /// could not start, which the plugin turns into a closed Dart stream.
 final class RuntimeHingeSource: NSObject, HingeSource {

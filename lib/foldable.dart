@@ -8,9 +8,9 @@
 /// none of this information reaches a Flutter app on its own. This package
 /// bridges it over a platform channel.
 ///
-/// The package is safe to depend on unconditionally: it compiles against
-/// iOS 13 and older SDKs, and on any device without a hinge it reports
-/// `isFoldable: false` with an empty stream.
+/// The package is safe to depend on unconditionally: it runs on iOS 15 and
+/// later, compiles against SDKs that predate the hinge APIs, and on any device
+/// without a hinge it reports `isFoldable: false` with an empty stream.
 ///
 /// ```dart
 /// // Outside the widget tree

@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 
 /// Bridges iPhone Duo hinge state to Flutter.
-public class FoldablePlugin: NSObject, FlutterPlugin {
+public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDelegate {
 
   private static let methodChannelName = "foldable/methods"
   private static let eventChannelName = "foldable/events"
@@ -11,6 +11,7 @@ public class FoldablePlugin: NSObject, FlutterPlugin {
   private let hingeSource: HingeSource
   private let regionSource: RegionSource
   private var streamHandler: HingeStreamHandler?
+  private weak var registrar: FlutterPluginRegistrar?
 
   override init() {
     hingeSource = FoldableSourceFactory.makeHingeSource()
@@ -20,6 +21,7 @@ public class FoldablePlugin: NSObject, FlutterPlugin {
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let instance = FoldablePlugin()
+    instance.registrar = registrar
 
     let methods = FlutterMethodChannel(
       name: methodChannelName, binaryMessenger: registrar.messenger())
@@ -36,28 +38,38 @@ public class FoldablePlugin: NSObject, FlutterPlugin {
       name: eventChannelName, binaryMessenger: registrar.messenger())
     events.setStreamHandler(handler)
 
+    // Both lifecycles, so activation reaches the plugin whether or not the app
+    // has migrated to UIScene.
+    registrar.addApplicationDelegate(instance)
+    registrar.addSceneDelegate(instance)
+
     // Installing the interaction early matters: the platform only reveals
     // whether this device has a hinge through an update, so without an
     // interaction already running, the first getSnapshot would have to answer
     // "unknown" and Dart would have nothing to go on.
-    registrar.addApplicationDelegate(instance)
     instance.installInteractionWhenPossible()
 
     registrar.publish(instance)
   }
 
+  public func sceneDidBecomeActive(_ scene: UIScene) {
+    installInteractionWhenPossible()
+  }
+
+  /// Covers apps that have not migrated to UIScene. Flutter does not call it in
+  /// apps that have, because this plugin receives their scene events instead.
   public func applicationDidBecomeActive(_ application: UIApplication) {
     installInteractionWhenPossible()
   }
 
   /// Attaches the hinge interaction to the Flutter view once one exists.
   ///
-  /// Retried rather than done once, because at registration time the window
-  /// may not have a root view yet.
+  /// Retried rather than done once, because at registration time the Flutter
+  /// view may not be in a window yet.
   func installInteractionWhenPossible() {
-    guard let view = Self.hostView() else {
+    guard let view = hostView else {
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-        guard let self = self, Self.hostView() != nil else { return }
+        guard let self = self, self.hostView != nil else { return }
         self.installInteractionWhenPossible()
       }
       return
@@ -137,7 +149,7 @@ public class FoldablePlugin: NSObject, FlutterPlugin {
       supportLevel = "unknown"
     }
 
-    let view = Self.hostView()
+    let view = hostView
     let sizeClasses = FoldableTraits.sizeClasses(for: view)
 
     var payload: [String: Any] = [
@@ -162,21 +174,17 @@ public class FoldablePlugin: NSObject, FlutterPlugin {
     return regionSource.regions(in: view)
   }
 
-  /// The view the interaction attaches to and regions are read from.
-  static func hostView() -> UIView? {
-    for scene in UIApplication.shared.connectedScenes {
-      guard let windowScene = scene as? UIWindowScene,
-        windowScene.activationState == .foregroundActive
-          || windowScene.activationState == .foregroundInactive
-      else { continue }
-      let window =
-        windowScene.windows.first(where: { $0.isKeyWindow })
-        ?? windowScene.windows.first
-      if let view = window?.rootViewController?.view ?? window {
-        return view
-      }
-    }
-    return nil
+  /// The view the interaction attaches to and regions are read from: this
+  /// plugin's Flutter view, once it is in a foreground window.
+  ///
+  /// Taken from the registrar rather than found by searching the app's windows,
+  /// which can pick another view in an add-to-app or multi-scene app.
+  private var hostView: UIView? {
+    guard let view = registrar?.viewController?.viewIfLoaded,
+      let state = view.window?.windowScene?.activationState,
+      state == .foregroundActive || state == .foregroundInactive
+    else { return nil }
+    return view
   }
 }
 
