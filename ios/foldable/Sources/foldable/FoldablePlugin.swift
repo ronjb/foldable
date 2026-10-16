@@ -95,6 +95,8 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   /// every change of the division, and none follows when the regions are only
   /// read outside layout. So a view with no content reads them in its
   /// `layoutSubviews`, which is all it takes.
+  ///
+  /// The same view also re-emits when the vertical bar edge changes.
   private func observeRegionLayout(in host: UIView) {
     // Moves with the hinge interaction when the Flutter view is replaced.
     guard regionObserver?.superview !== host else { return }
@@ -109,13 +111,21 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
         .joined(separator: "|")
       guard signature != self.lastRegionSignature else { return }
       self.lastRegionSignature = signature
-      // A device that has settled as having no hinge has already had its
-      // stream closed; there is nothing left to tell it.
-      guard self.hingeSource.hasHinge != false else { return }
-      self.streamHandler?.emit(self.hingeSource.currentReading)
+      self.emitUpdate()
+    }
+    FoldableVerticalBar.observeChanges(on: observer) { [weak self] in
+      self?.emitUpdate()
     }
     host.insertSubview(observer, at: 0)
     regionObserver = observer
+  }
+
+  /// Sends a fresh snapshot to Dart.
+  private func emitUpdate() {
+    // A device that has settled as having no hinge has already had its stream
+    // closed; there is nothing left to tell it.
+    guard hingeSource.hasHinge != false else { return }
+    streamHandler?.emit(hingeSource.currentReading)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

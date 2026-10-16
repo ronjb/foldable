@@ -29,6 +29,29 @@ enum FoldableVerticalBar {
     }
   }
 
+  /// Calls `onChange` whenever a trait that affects the vertical bar edge
+  /// changes on `view`, for as long as `view` lives.
+  ///
+  /// The bar's traits settle up to a frame after the window resizes. Measured
+  /// on the iPhone Duo simulator, rotating the inner display to portrait still
+  /// reads a trailing edge 11ms after the new size, and unfolding passes
+  /// through a state with no vertical bar before a trait change restores it.
+  /// A snapshot read because of the resize alone can report the old bar. This
+  /// is the registration the SDK provides for it: `registerForTraitChanges:`
+  /// with `systemTraitsAffectingVerticalBarEdge`.
+  static func observeChanges(on view: UIView, _ onChange: @escaping () -> Void) {
+    let register = NSSelectorFromString("registerForTraitChanges:withHandler:")
+    guard view.responds(to: register),
+      let traits = ObjCRuntimeSupport.classObject(
+        "UITraitCollection", "systemTraitsAffectingVerticalBarEdge") as? NSArray
+    else { return }
+    let handler: @convention(block) (AnyObject, UITraitCollection) -> Void = { _, _ in
+      onChange()
+    }
+    // The registration lives as long as the view, so the token is not kept.
+    _ = view.perform(register, with: traits, with: unsafeBitCast(handler, to: AnyObject.self))
+  }
+
   /// The part of the vertical bar free for bar content, in `view`'s
   /// coordinates, or `.zero` while there is no vertical bar.
   ///

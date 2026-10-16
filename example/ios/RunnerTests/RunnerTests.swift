@@ -51,6 +51,25 @@ class RunnerTests: XCTestCase {
     wait(for: [built], timeout: 1)
     XCTAssertEqual(builtOnMain, true)
   }
+
+  func testVerticalBarTraitChangesAreObserved() throws {
+    // The bar's traits can settle after the resize that prompted a read, so
+    // the plugin re-emits when one of them changes.
+    guard #available(iOS 17.0, *),
+      UITraitCollection.responds(to: NSSelectorFromString("systemTraitsAffectingVerticalBarEdge"))
+    else { throw XCTSkip("Needs the iOS 27.1 vertical bar traits.") }
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 400, height: 800))
+    let view = UIView()
+    window.addSubview(view)
+    var changes = 0
+    FoldableVerticalBar.observeChanges(on: view) { changes += 1 }
+
+    // Layout direction is one of the traits that affect the edge.
+    view.traitOverrides.layoutDirection = .rightToLeft
+    view.updateTraitsIfNeeded()
+
+    XCTAssertEqual(changes, 1)
+  }
 }
 
 /// The number of `UIHingeInteraction`s on `view`, ignoring the helper

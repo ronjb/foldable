@@ -157,18 +157,24 @@ return Stack(
 ```
 
 Measured on the iPhone Duo simulator, it is centred 48pt in from the trailing
-edge on both displays:
+edge whenever there is one:
 
 | Display | Window | Vertical bar frame |
 |---|---|---|
 | Cover | 466x678pt | 84x470pt, from 174pt down |
 | Inner, fully open | 951x669pt | 84x511pt, from 124pt down |
+| Inner, rotated to portrait | 669x951pt | None: the status bar returns to the top |
 
 It is UIKit's own layout region for a bar on that edge
 (`UIViewLayoutRegion`), as wide as the bar's safe area inset; keep narrower
 content centred in it to line up with the status bar.
 `DuoMediaQuery.verticalBarEdgeOf` says which edge the system uses. The example
 app tints the frame and shows its size, so you can see the space in each pose.
+
+The bar's traits can settle a frame after the window resizes, and unfolding
+passes briefly through a state with no vertical bar. The plugin registers for
+changes to `systemTraitsAffectingVerticalBarEdge` and sends a fresh snapshot
+on each, so the frame always ends up where the bar settled.
 
 ## The `MediaQuery` bridge is opt-in, and here is why
 

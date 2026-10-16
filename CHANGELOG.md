@@ -7,8 +7,10 @@
   out a bar on that edge. `verticalBarEdge` and
   `DuoMediaQuery.verticalBarEdgeOf` say which edge it is on. Both are read
   through the Objective-C runtime, so older SDKs keep compiling.
-- `FoldableProvider` also re-reads the platform when the safe area changes,
-  since the vertical bar can come and go without the window resizing.
+- The plugin re-sends the snapshot whenever a trait in
+  `systemTraitsAffectingVerticalBarEdge` changes, because the bar can settle
+  a frame after the window resizes. `FoldableProvider` also re-reads the
+  platform when the safe area changes, not only the window size.
 - **Example app:** example buttons in the vertical bar, tinted and labelled
   with the space available, and the cards no longer run under the status bar.
 
