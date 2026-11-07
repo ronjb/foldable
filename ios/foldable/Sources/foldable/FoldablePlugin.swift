@@ -83,9 +83,10 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   // MARK: - Region changes
 
   private weak var regionObserver: RegionLayoutObserver?
-  private var lastRegionSignature = ""
+  private var lastLayoutSignature = ""
 
-  /// Re-emits when a reserved region changes.
+  /// Re-emits when a reserved region, or the part of the vertical bar free for
+  /// bar content, changes.
   ///
   /// Reserved regions lag the hinge: inside the update handler the fold
   /// division still has its pre-move `isActive`, and the view's bounds do not
@@ -95,6 +96,13 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   /// every change of the division, and none follows when the regions are only
   /// read outside layout. So a view with no content reads them in its
   /// `layoutSubviews`, which is all it takes.
+  ///
+  /// The vertical bar's free part is read there too, because it moves with the
+  /// status bar, such as when a Live Activity grows the Dynamic Island, and
+  /// the status bar's occlusion region moves in a separate layout pass. On the
+  /// simulator the bar moved first, so the occlusion's pass sent the new bar,
+  /// but on an iPhone Duo a Live Activity left the old bar in place, which is
+  /// what the other order does when only the regions are watched.
   ///
   /// The same view also re-emits when the vertical bar edge changes.
   private func observeRegionLayout(in host: UIView) {
@@ -106,11 +114,13 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
     observer.isUserInteractionEnabled = false
     observer.onLayout = { [weak self] view in
       guard let self = self else { return }
-      let signature = self.regions(in: view)
+      let regions = self.regions(in: view)
         .map { "\($0.kind.rawValue):\($0.isActive):\($0.frame)" }
         .joined(separator: "|")
-      guard signature != self.lastRegionSignature else { return }
-      self.lastRegionSignature = signature
+      let bar = FoldableVerticalBar.frame(in: view, edge: FoldableVerticalBar.edge(for: view))
+      let signature = "\(regions)|bar:\(bar)"
+      guard signature != self.lastLayoutSignature else { return }
+      self.lastLayoutSignature = signature
       self.emitUpdate()
     }
     FoldableVerticalBar.observeChanges(on: observer) { [weak self] in

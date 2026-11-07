@@ -9,8 +9,10 @@
   through the Objective-C runtime, so older SDKs keep compiling.
 - The plugin re-sends the snapshot whenever a trait in
   `systemTraitsAffectingVerticalBarEdge` changes, because the bar can settle
-  a frame after the window resizes. `FoldableProvider` also re-reads the
-  platform when the safe area changes, not only the window size.
+  a frame after the window resizes, and whenever the bar's free part moves,
+  such as when a Live Activity grows the Dynamic Island and pushes the status
+  bar down. `FoldableProvider` also re-reads the platform when the safe area
+  changes, not only the window size.
 - **Example app:** example buttons in the vertical bar, tinted and labelled
   with the space available, and the cards no longer run under the status bar.
 
