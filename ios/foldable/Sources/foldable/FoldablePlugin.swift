@@ -85,8 +85,8 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   private weak var regionObserver: RegionLayoutObserver?
   private var lastLayoutSignature = ""
 
-  /// Re-emits when a reserved region, or the part of the vertical bar free for
-  /// bar content, changes.
+  /// Re-emits when a reserved region, the part of the vertical bar free for
+  /// bar content, or the top bar's frame changes.
   ///
   /// Reserved regions lag the hinge: inside the update handler the fold
   /// division still has its pre-move `isActive`, and the view's bounds do not
@@ -104,6 +104,11 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   /// but on an iPhone Duo a Live Activity left the old bar in place, which is
   /// what the other order does when only the regions are watched.
   ///
+  /// The top bar's frame is read there for the same reason: on the inner
+  /// display in portrait it ends where the status bar's cluster begins, and
+  /// on the simulator it moved about 2ms before the cluster's occlusion
+  /// region.
+  ///
   /// The same view also re-emits when the vertical bar edge changes.
   private func observeRegionLayout(in host: UIView) {
     // Moves with the hinge interaction when the Flutter view is replaced.
@@ -118,7 +123,8 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
         .map { "\($0.kind.rawValue):\($0.isActive):\($0.frame)" }
         .joined(separator: "|")
       let bar = FoldableVerticalBar.frame(in: view, edge: FoldableVerticalBar.edge(for: view))
-      let signature = "\(regions)|bar:\(bar)"
+      let topBar = FoldableTopBar.frame(in: view)
+      let signature = "\(regions)|bar:\(bar)|top:\(topBar)"
       guard signature != self.lastLayoutSignature else { return }
       self.lastLayoutSignature = signature
       self.emitUpdate()
@@ -189,15 +195,20 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
       "horizontalSizeClass": sizeClasses.horizontal.rawValue,
       "verticalSizeClass": sizeClasses.vertical.rawValue,
       "verticalBarEdge": barEdge.rawValue,
-      "verticalBar": [
-        "left": Double(bar.origin.x),
-        "top": Double(bar.origin.y),
-        "width": Double(bar.size.width),
-        "height": Double(bar.size.height),
-      ],
+      "verticalBar": Self.wire(bar),
+      "topBar": Self.wire(FoldableTopBar.frame(in: view)),
     ]
     payload["angleDegrees"] = reading?.angleDegrees ?? NSNull()
     return payload
+  }
+
+  private static func wire(_ rect: CGRect) -> [String: Double] {
+    [
+      "left": Double(rect.origin.x),
+      "top": Double(rect.origin.y),
+      "width": Double(rect.size.width),
+      "height": Double(rect.size.height),
+    ]
   }
 
   private func regions(in view: UIView?) -> [FoldableRegion] {

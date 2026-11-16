@@ -176,6 +176,20 @@ passes briefly through a state with no vertical bar. The plugin registers for
 changes to `systemTraitsAffectingVerticalBarEdge` and sends a fresh snapshot
 on each, so the frame always ends up where the bar settled.
 
+### The top bar beside the status bar
+
+On the inner display held in portrait there is no vertical bar. The status bar
+returns to the top, gathered into a cluster at the top right, and native apps
+put their top bar in the same row, left of the cluster. Flutter sees a top
+safe area across the whole width, so an `AppBar` starts under that row.
+
+`DuoMediaQuery.topBarFrameOf` gives UIKit's frame for a bar in that row
+(`UIViewLayoutRegion`, 48pt tall), and `Rect.zero` in every other pose and on
+other devices. Measured on the iPhone Duo simulator, it is 509×48pt at 16, 24.
+A Live Activity widens the cluster, which narrows the frame to 451pt. It is
+centred vertically on the clock. An `AppBar` placed in it needs a
+`toolbarHeight` of 48 rather than the default 56.
+
 ## The `MediaQuery` bridge is opt-in, and here is why
 
 Flutter's `DisplayFeatureSubScreen` confines dialogs, bottom sheets, popup

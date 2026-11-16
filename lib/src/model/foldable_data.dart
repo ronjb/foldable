@@ -27,6 +27,7 @@ class FoldableData {
     this.verticalSizeClass = SizeClass.unspecified,
     this.verticalBarEdge = VerticalBarEdge.unspecified,
     this.verticalBarFrame = Rect.zero,
+    this.topBarFrame = Rect.zero,
   });
 
   /// The value used on devices without a hinge, on non-iOS platforms, and
@@ -87,6 +88,21 @@ class FoldableData {
   /// content centred in it to line up with the status bar.
   final Rect verticalBarFrame;
 
+  /// Where native apps put their top bar beside the status bar, in logical
+  /// pixels, or [Rect.zero] while there is none.
+  ///
+  /// On the iPhone Duo's inner display held in portrait, iOS gathers the
+  /// status bar into a cluster at the top right, and native apps put their
+  /// top bar in the same row, above `MediaQuery.padding.top`. This is UIKit's
+  /// frame for that bar: it ends where the cluster begins, so it narrows when
+  /// a Live Activity widens the cluster, and it is centred vertically on the
+  /// clock. In every other pose, on other devices, and before iOS 27.1, it is
+  /// [Rect.zero].
+  ///
+  /// Its height is always 48, the height the plugin asks UIKit for, so give an
+  /// `AppBar` placed in it a `toolbarHeight` of 48 rather than the default 56.
+  final Rect topBarFrame;
+
   /// Whether this device physically has a hinge.
   bool get isFoldable => capabilities.isFoldable;
 
@@ -113,6 +129,7 @@ class FoldableData {
     SizeClass? verticalSizeClass,
     VerticalBarEdge? verticalBarEdge,
     Rect? verticalBarFrame,
+    Rect? topBarFrame,
   }) {
     return FoldableData(
       capabilities: capabilities ?? this.capabilities,
@@ -124,6 +141,7 @@ class FoldableData {
       verticalSizeClass: verticalSizeClass ?? this.verticalSizeClass,
       verticalBarEdge: verticalBarEdge ?? this.verticalBarEdge,
       verticalBarFrame: verticalBarFrame ?? this.verticalBarFrame,
+      topBarFrame: topBarFrame ?? this.topBarFrame,
     );
   }
 
@@ -138,6 +156,7 @@ class FoldableData {
           other.verticalSizeClass == verticalSizeClass &&
           other.verticalBarEdge == verticalBarEdge &&
           other.verticalBarFrame == verticalBarFrame &&
+          other.topBarFrame == topBarFrame &&
           listEquals(other.regions, regions) &&
           listEquals(other.displayFeatures, displayFeatures);
 
@@ -150,6 +169,7 @@ class FoldableData {
     verticalSizeClass,
     verticalBarEdge,
     verticalBarFrame,
+    topBarFrame,
     Object.hashAll(regions),
     Object.hashAll(displayFeatures),
   );

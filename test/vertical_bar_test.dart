@@ -9,8 +9,13 @@ import 'package:foldable/src/platform/foldable_codec.dart';
 /// the simulator.
 const Rect kCoverBar = Rect.fromLTWH(376, 174, 84, 470);
 
+/// The top bar's frame on the iPhone Duo inner display in portrait, as
+/// measured on the simulator, beside the status bar with no Live Activity.
+const Rect kPortraitTopBar = Rect.fromLTWH(16, 24, 509, 48);
+
 FoldableData dataWith({
   Rect bar = Rect.zero,
+  Rect topBar = Rect.zero,
   HingeStatus status = HingeStatus.closed,
 }) => FoldableData(
   capabilities: const FoldableCapabilities(
@@ -27,6 +32,7 @@ FoldableData dataWith({
   displayFeatures: const [],
   verticalBarEdge: VerticalBarEdge.trailing,
   verticalBarFrame: bar,
+  topBarFrame: topBar,
 );
 
 Future<void> pushData(
@@ -57,14 +63,33 @@ void main() {
       expect(data.verticalBarFrame, kCoverBar);
     });
 
+    test('decodes the top bar', () {
+      final FoldableData data = FoldableCodec.decodeSnapshot(
+        const <Object?, Object?>{
+          'topBar': <String, Object?>{
+            'left': 16,
+            'top': 24,
+            'width': 509,
+            'height': 48,
+          },
+        },
+      );
+      expect(data.topBarFrame, kPortraitTopBar);
+    });
+
     test('missing or malformed values mean no bar', () {
       for (final Map<Object?, Object?> raw in <Map<Object?, Object?>>[
         const <Object?, Object?>{},
-        const <Object?, Object?>{'verticalBarEdge': 'top', 'verticalBar': 'x'},
+        const <Object?, Object?>{
+          'verticalBarEdge': 'top',
+          'verticalBar': 'x',
+          'topBar': 'x',
+        },
       ]) {
         final FoldableData data = FoldableCodec.decodeSnapshot(raw);
         expect(data.verticalBarEdge, VerticalBarEdge.unspecified);
         expect(data.verticalBarFrame, Rect.zero);
+        expect(data.topBarFrame, Rect.zero);
       }
     });
 
@@ -151,6 +176,54 @@ void main() {
         reason: 'posture reader rebuilt on a vertical-bar-only change',
       );
       expect(barBuilds, greaterThan(barBaseline));
+    });
+
+    testWidgets('a top bar change rebuilds only its readers', (
+      WidgetTester tester,
+    ) async {
+      final StreamController<FoldableData> feed =
+          StreamController<FoldableData>.broadcast();
+      addTearDown(feed.close);
+
+      late Rect frame;
+      int barBuilds = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoldableProvider(
+            debugData: feed.stream,
+            child: Column(
+              children: <Widget>[
+                Builder(
+                  builder: (BuildContext context) {
+                    frame = DuoMediaQuery.topBarFrameOf(context);
+                    return const SizedBox();
+                  },
+                ),
+                Builder(
+                  builder: (BuildContext context) {
+                    DuoMediaQuery.verticalBarFrameOf(context);
+                    barBuilds++;
+                    return const SizedBox();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await pushData(tester, feed, dataWith());
+      expect(frame, Rect.zero);
+      final int barBaseline = barBuilds;
+
+      await pushData(tester, feed, dataWith(topBar: kPortraitTopBar));
+
+      expect(frame, kPortraitTopBar);
+      expect(
+        barBuilds,
+        barBaseline,
+        reason: 'vertical bar reader rebuilt on a top-bar-only change',
+      );
     });
 
     testWidgets('without a provider there is no bar', (

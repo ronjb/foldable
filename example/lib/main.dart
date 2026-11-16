@@ -274,6 +274,7 @@ class _DeviceCard extends StatelessWidget {
     final FoldableData data = DuoMediaQuery.of(context);
     final FoldableCapabilities caps = data.capabilities;
     final Rect bar = data.verticalBarFrame;
+    final Rect topBar = data.topBarFrame;
 
     return Card(
       child: Padding(
@@ -298,6 +299,11 @@ class _DeviceCard extends StatelessWidget {
               'bar frame',
               '${bar.width.round()}×${bar.height.round()} '
                   'at ${bar.left.round()}, ${bar.top.round()}',
+            ),
+            _Row(
+              'top bar frame',
+              '${topBar.width.round()}×${topBar.height.round()} '
+                  'at ${topBar.left.round()}, ${topBar.top.round()}',
             ),
           ],
         ),

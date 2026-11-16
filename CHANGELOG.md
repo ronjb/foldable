@@ -13,6 +13,13 @@
   such as when a Live Activity grows the Dynamic Island and pushes the status
   bar down. `FoldableProvider` also re-reads the platform when the safe area
   changes, not only the window size.
+- **Top bar.** On iPhone Duo's inner display held in portrait, the status bar
+  gathers into a cluster at the top right, and native apps put their top bar
+  in the same row. `FoldableData.topBarFrame` and
+  `DuoMediaQuery.topBarFrameOf` give UIKit's frame for that bar, which ends
+  where the cluster begins and narrows when a Live Activity widens the
+  cluster, and `Rect.zero` everywhere else. The plugin re-sends the snapshot
+  when it moves.
 - **Example app:** example buttons in the vertical bar, tinted and labelled
   with the space available, and the cards no longer run under the status bar.
 

@@ -29,6 +29,9 @@ enum FoldableAspect {
 
   /// The iPhone Duo vertical bar.
   verticalBar,
+
+  /// The top bar beside the status bar on the iPhone Duo's inner display.
+  topBar,
 }
 
 /// Exposes fold state to the widget tree.
@@ -128,6 +131,18 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
       )?.data.verticalBarFrame ??
       Rect.zero;
 
+  /// Where native apps put their top bar beside the status bar, or
+  /// [Rect.zero] while there is none, rebuilding only when it changes.
+  ///
+  /// Only the iPhone Duo's inner display in portrait has one. See
+  /// [FoldableData.topBarFrame].
+  static Rect topBarFrameOf(BuildContext context) =>
+      InheritedModel.inheritFrom<DuoMediaQuery>(
+        context,
+        aspect: FoldableAspect.topBar,
+      )?.data.topBarFrame ??
+      Rect.zero;
+
   /// Whether the device has a hinge, rebuilding only when that changes.
   static bool isFoldableOf(BuildContext context) =>
       InheritedModel.inheritFrom<DuoMediaQuery>(
@@ -171,6 +186,7 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
         FoldableAspect.verticalBar =>
           data.verticalBarEdge != old.verticalBarEdge ||
               data.verticalBarFrame != old.verticalBarFrame,
+        FoldableAspect.topBar => data.topBarFrame != old.topBarFrame,
       },
     );
   }
