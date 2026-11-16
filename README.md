@@ -187,8 +187,17 @@ safe area across the whole width, so an `AppBar` starts under that row.
 (`UIViewLayoutRegion`, 48pt tall), and `Rect.zero` in every other pose and on
 other devices. Measured on the iPhone Duo simulator, it is 509×48pt at 16, 24.
 A Live Activity widens the cluster, which narrows the frame to 451pt. It is
-centred vertically on the clock. An `AppBar` placed in it needs a
-`toolbarHeight` of 48 rather than the default 56.
+centred vertically on the clock.
+
+Safari's bar fills that row down to 84pt, with its buttons centred on the
+clock at 48pt. To do the same with an `AppBar`, end it at the bottom of the
+status bar, `MediaQuery.padding.top`, and centre its toolbar on the frame:
+there that is 14pt of top padding and a `toolbarHeight` of 68. Give it a right
+padding that ends it at the frame's right edge too. The bar then also covers
+the backdrop iOS draws behind the cluster, which reaches about 76pt down. The
+`Scaffold` still leaves room for the whole status bar above an app bar, which
+an `AppBar` stretches to fill, so give it a fixed height as well. The example
+app does all of this.
 
 ## The `MediaQuery` bridge is opt-in, and here is why
 

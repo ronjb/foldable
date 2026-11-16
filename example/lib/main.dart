@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' show DisplayFeature;
 
 import 'package:material_ui/material_ui.dart';
@@ -151,21 +152,57 @@ class _HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Rect bar = DuoMediaQuery.verticalBarFrameOf(context);
+    final Rect topBar = DuoMediaQuery.topBarFrameOf(context);
+    final EdgeInsets padding = MediaQuery.paddingOf(context);
+    // Beside the status bar, the app bar fills the status bar's row, as
+    // Safari's does, with its contents centred on the frame, which is centred
+    // on the clock.
+    final double barBottom = math.max(padding.top, topBar.bottom);
+    final double toolbarHeight = 2 * (barBottom - topBar.center.dy);
+    final double topPadding = barBottom - toolbarHeight;
+    final AppBar appBar = AppBar(
+      toolbarHeight: topBar.isEmpty ? null : toolbarHeight,
+      title: const Text('foldable'),
+      actions: <Widget>[
+        IconButton(
+          tooltip: 'Native API dump',
+          icon: const Icon(Icons.bug_report_outlined),
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute<void>(builder: (_) => const _DumpPage())),
+        ),
+      ],
+    );
     return Stack(
       children: <Widget>[
         Scaffold(
-          appBar: AppBar(
-            title: const Text('foldable'),
-            actions: <Widget>[
-              IconButton(
-                tooltip: 'Native API dump',
-                icon: const Icon(Icons.bug_report_outlined),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const _DumpPage()),
+          // Beside the status bar, on the inner display held in portrait, the
+          // app bar moves up into the status bar's row and stops left of the
+          // time and camera, as native apps' bars do. Only the app bar gets
+          // this padding, so a drawer or a dialog still keeps clear of the
+          // status bar. The frame's left edge is the 16pt margin the AppBar
+          // already keeps.
+          //
+          // The Scaffold leaves room for the whole status bar above an app
+          // bar, and an AppBar fills the room it is given, so the SizedBox
+          // keeps it to the status bar's row.
+          appBar: topBar.isEmpty
+              ? appBar
+              : PreferredSize(
+                  preferredSize: appBar.preferredSize,
+                  child: SizedBox(
+                    height: topPadding + appBar.preferredSize.height,
+                    child: MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        padding: padding.copyWith(
+                          top: topPadding,
+                          right:
+                              MediaQuery.sizeOf(context).width - topBar.right,
+                        ),
+                      ),
+                      child: appBar,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
           // Keeps the cards out of the vertical bar, which is a side safe area
           // inset on iPhone Duo.
           body: SafeArea(

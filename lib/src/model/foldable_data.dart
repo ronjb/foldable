@@ -99,8 +99,10 @@ class FoldableData {
   /// clock. In every other pose, on other devices, and before iOS 27.1, it is
   /// [Rect.zero].
   ///
-  /// Its height is always 48, the height the plugin asks UIKit for, so give an
-  /// `AppBar` placed in it a `toolbarHeight` of 48 rather than the default 56.
+  /// Its height is always 48, the height the plugin asks UIKit for. An
+  /// `AppBar` lines up with the clock when its toolbar is centred on this
+  /// frame. The README shows how to fill the status bar's row with one, as
+  /// Safari does.
   final Rect topBarFrame;
 
   /// Whether this device physically has a hinge.
