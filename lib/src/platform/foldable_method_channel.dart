@@ -14,6 +14,9 @@ const String kFoldableMethodChannel = 'foldable/methods';
 /// The event channel carrying state snapshots.
 const String kFoldableEventChannel = 'foldable/events';
 
+/// The event channel carrying layout snapshots.
+const String kFoldableLayoutChannel = 'foldable/layout';
+
 /// The default [FoldablePlatform], talking to the iOS plugin over channels.
 class MethodChannelFoldable extends FoldablePlatform {
   /// The method channel used for one-shot queries.
@@ -26,13 +29,22 @@ class MethodChannelFoldable extends FoldablePlatform {
   @visibleForTesting
   final EventChannel eventChannel = const EventChannel(kFoldableEventChannel);
 
+  /// The event channel carrying layout changes.
+  @visibleForTesting
+  final EventChannel layoutChannel = const EventChannel(kFoldableLayoutChannel);
+
   Stream<FoldableData>? _events;
+  Stream<FoldableData>? _layoutChanges;
+
+  /// Whether the last [getSnapshot] found no plugin to answer it.
+  bool _pluginMissing = false;
 
   @override
   Future<FoldableData> getSnapshot() async {
     try {
       final Map<Object?, Object?>? raw = await methodChannel
           .invokeMapMethod<Object?, Object?>('getSnapshot');
+      _pluginMissing = false;
       assert(() {
         _debugCheckWireVersion(raw?['wireVersion']);
         return true;
@@ -40,6 +52,7 @@ class MethodChannelFoldable extends FoldablePlatform {
       return FoldableCodec.decodeSnapshot(raw);
     } on MissingPluginException {
       // Plugin not registered: another platform, or a hot-restart race.
+      _pluginMissing = true;
       return FoldableData.unsupported;
     } on PlatformException {
       return FoldableData.unsupported;
@@ -142,9 +155,87 @@ class MethodChannelFoldable extends FoldablePlatform {
     }, isBroadcast: true);
   }
 
-  /// Drops the cached stream so a test can start from a clean slate.
+  @override
+  Stream<FoldableData> get layoutChanges =>
+      _layoutChanges ??= _createLayoutStream();
+
+  /// Builds the broadcast stream of layout changes.
+  ///
+  /// Listening to an `EventChannel` with no plugin behind it reports a
+  /// `MissingPluginException` through `FlutterError.reportError`, out of the
+  /// stream's reach, which fails the widget tests of an app that targets iOS
+  /// without the plugin. So, as for [events], the method channel is asked
+  /// first, and the layout channel is only listened to once the plugin has
+  /// answered.
+  Stream<FoldableData> _createLayoutStream() {
+    // Only the iOS plugin has the channel.
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      return const Stream<FoldableData>.empty();
+    }
+
+    late final StreamController<FoldableData> controller;
+    StreamSubscription<Object?>? subscription;
+
+    Future<void> start() async {
+      await getSnapshot();
+      // While the snapshot was in flight the last listener may have left, or
+      // a later start() may already have subscribed.
+      if (_pluginMissing || !controller.hasListener || subscription != null) {
+        return;
+      }
+      subscription = layoutChannel.receiveBroadcastStream().listen(
+        (Object? event) {
+          if (event is Map) {
+            controller.add(
+              FoldableCodec.decodeSnapshot(event.cast<Object?, Object?>()),
+            );
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          // A native hiccup must not tear down every consumer.
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stack,
+              library: 'foldable',
+              context: ErrorDescription('while receiving layout events'),
+            ),
+          );
+        },
+      );
+    }
+
+    controller = StreamController<FoldableData>.broadcast(
+      onListen: () => unawaited(start()),
+      onCancel: () {
+        unawaited(subscription?.cancel());
+        subscription = null;
+      },
+    );
+
+    // The plugin sends the current layout only when the channel is first
+    // listened to, so a later listener is sent a fresh snapshot. The last
+    // event would not do: an iPad's size classes change with its window
+    // without a layout event. The plugin answers and sends events in order,
+    // so the snapshot is never older than an event that arrives before it.
+    return Stream<FoldableData>.multi((
+      MultiStreamController<FoldableData> listener,
+    ) {
+      if (subscription != null) unawaited(getSnapshot().then(listener.add));
+      final StreamSubscription<FoldableData> forwarding = controller.stream
+          .listen(
+            listener.add,
+            onError: listener.addError,
+            onDone: listener.close,
+          );
+      listener.onCancel = forwarding.cancel;
+    }, isBroadcast: true);
+  }
+
+  /// Drops the cached streams so a test can start from a clean slate.
   void debugReset() {
     _events = null;
+    _layoutChanges = null;
   }
 
   @override

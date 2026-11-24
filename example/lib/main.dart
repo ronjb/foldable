@@ -85,44 +85,47 @@ class _FoldableExampleAppState extends State<FoldableExampleApp> {
     return MaterialApp(
       title: 'foldable',
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: FoldableProvider(
+      // Around the navigator, so pushed routes, such as the API dump, can
+      // read the fold and the window controls too.
+      builder: (BuildContext context, Widget? child) => FoldableProvider(
         bridgeMode: _bridgeMode,
         debugData: _simulate ? _simulator.stream : null,
-        child: _HomePage(
-          simulate: _simulate,
-          bridgeMode: _bridgeMode,
-          status: _status,
-          angle: _angle,
-          onSimulateChanged: (bool value) {
-            setState(() => _simulate = value);
-            _pushSimulated();
-          },
-          onBridgeModeChanged: (DisplayFeatureBridgeMode mode) =>
-              setState(() => _bridgeMode = mode),
-          onStatusChanged: (HingeStatus status) {
-            setState(() {
-              _status = status;
-              _angle = switch (status) {
-                HingeStatus.closed => 0,
-                HingeStatus.partiallyOpen => 95,
-                HingeStatus.fullyOpen => 180,
-                HingeStatus.unknown => _angle,
-              };
-            });
-            _pushSimulated();
-          },
-          onAngleChanged: (double angle) {
-            setState(() {
-              _angle = angle;
-              _status = angle <= 5
-                  ? HingeStatus.closed
-                  : angle >= 175
-                  ? HingeStatus.fullyOpen
-                  : HingeStatus.partiallyOpen;
-            });
-            _pushSimulated();
-          },
-        ),
+        child: child!,
+      ),
+      home: _HomePage(
+        simulate: _simulate,
+        bridgeMode: _bridgeMode,
+        status: _status,
+        angle: _angle,
+        onSimulateChanged: (bool value) {
+          setState(() => _simulate = value);
+          _pushSimulated();
+        },
+        onBridgeModeChanged: (DisplayFeatureBridgeMode mode) =>
+            setState(() => _bridgeMode = mode),
+        onStatusChanged: (HingeStatus status) {
+          setState(() {
+            _status = status;
+            _angle = switch (status) {
+              HingeStatus.closed => 0,
+              HingeStatus.partiallyOpen => 95,
+              HingeStatus.fullyOpen => 180,
+              HingeStatus.unknown => _angle,
+            };
+          });
+          _pushSimulated();
+        },
+        onAngleChanged: (double angle) {
+          setState(() {
+            _angle = angle;
+            _status = angle <= 5
+                ? HingeStatus.closed
+                : angle >= 175
+                ? HingeStatus.fullyOpen
+                : HingeStatus.partiallyOpen;
+          });
+          _pushSimulated();
+        },
       ),
     );
   }
@@ -186,7 +189,7 @@ class _HomePage extends StatelessWidget {
           // bar, and an AppBar fills the room it is given, so the SizedBox
           // keeps it to the status bar's row.
           appBar: topBar.isEmpty
-              ? appBar
+              ? _BesideWindowControls(appBar: appBar)
               : PreferredSize(
                   preferredSize: appBar.preferredSize,
                   child: SizedBox(
@@ -239,6 +242,43 @@ class _HomePage extends StatelessWidget {
             child: _VerticalBar(size: bar.size),
           ),
       ],
+    );
+  }
+}
+
+/// Moves [appBar]'s contents out of the corner the iPad's window controls take,
+/// as native bars do. Its background still fills the corner, under the
+/// controls.
+///
+/// An `AppBar` keeps its contents inside `MediaQuery.padding`, so widening the
+/// padding on the controls' side is all it takes. Its `bottom` moves as well,
+/// although with the standard toolbar height it already sits below the corner.
+class _BesideWindowControls extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _BesideWindowControls({required this.appBar});
+
+  final PreferredSizeWidget appBar;
+
+  @override
+  Size get preferredSize => appBar.preferredSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final Rect controls = DuoMediaQuery.windowControlsFrameOf(context);
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final EdgeInsets padding = mediaQuery.padding;
+    final double width = mediaQuery.size.width;
+    return MediaQuery(
+      data: mediaQuery.copyWith(
+        padding: controls.isEmpty
+            ? padding
+            : controls.left <= 0
+            ? padding.copyWith(left: math.max(padding.left, controls.right))
+            : padding.copyWith(
+                right: math.max(padding.right, width - controls.left),
+              ),
+      ),
+      child: appBar,
     );
   }
 }
@@ -312,6 +352,7 @@ class _DeviceCard extends StatelessWidget {
     final FoldableCapabilities caps = data.capabilities;
     final Rect bar = data.verticalBarFrame;
     final Rect topBar = data.topBarFrame;
+    final Rect controls = data.windowControlsFrame;
 
     return Card(
       child: Padding(
@@ -341,6 +382,11 @@ class _DeviceCard extends StatelessWidget {
               'top bar frame',
               '${topBar.width.round()}×${topBar.height.round()} '
                   'at ${topBar.left.round()}, ${topBar.top.round()}',
+            ),
+            _Row(
+              'window controls',
+              '${controls.width.round()}×${controls.height.round()} '
+                  'at ${controls.left.round()}, ${controls.top.round()}',
             ),
           ],
         ),
@@ -662,7 +708,9 @@ class _DumpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Native API dump')),
+      appBar: _BesideWindowControls(
+        appBar: AppBar(title: const Text('Native API dump')),
+      ),
       body: FutureBuilder<Map<String, Object?>>(
         future: Foldable.debugDumpNativeApi(),
         builder:

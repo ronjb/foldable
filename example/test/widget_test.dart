@@ -10,6 +10,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Device'), findsOneWidget);
-    expect(find.text('Hinge angle'), findsOneWidget);
+    // Below the Device card, past the bottom of the 800×600 test window.
+    expect(find.text('Hinge angle', skipOffstage: false), findsOneWidget);
   });
 }

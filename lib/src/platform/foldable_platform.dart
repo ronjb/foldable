@@ -44,6 +44,14 @@ abstract class FoldablePlatform extends PlatformInterface {
     throw UnimplementedError('events has not been implemented.');
   }
 
+  /// A broadcast stream of snapshots sent whenever the window's layout
+  /// changes: a reserved region, the vertical bar, the top bar, or the iPad's
+  /// window controls.
+  ///
+  /// Unlike [events] it never closes on a device without a hinge, where the
+  /// window controls change too. Empty where the platform has none.
+  Stream<FoldableData> get layoutChanges => const Stream<FoldableData>.empty();
+
   /// Dumps the Objective-C runtime shape of the hinge APIs, for diagnostics.
   ///
   /// Apple's reference documentation for `UIHingeInteraction` is not published

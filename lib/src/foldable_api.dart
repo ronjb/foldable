@@ -29,14 +29,29 @@ abstract final class Foldable {
   static Future<FoldableData> get snapshot =>
       FoldablePlatform.instance.getSnapshot();
 
-  /// Every state change, as an atomic snapshot.
+  /// Every state change on a device with a hinge, as an atomic snapshot.
+  ///
+  /// It completes once the platform reports that the device has no hinge,
+  /// which it does only through a hinge update. An iPad on iPadOS 27 never
+  /// sends one, so there it stays open. The window's layout, such as an iPad's
+  /// window controls, changes without a hinge too: [layoutChanges] carries
+  /// those everywhere.
   static Stream<FoldableData> get changes => FoldablePlatform.instance.events;
+
+  /// Every change of the window's layout, as an atomic snapshot: a reserved
+  /// region, the vertical bar, the top bar, or an iPad's window controls.
+  ///
+  /// Unlike [changes], it never completes on iOS. It is empty on other
+  /// platforms.
+  static Stream<FoldableData> get layoutChanges =>
+      FoldablePlatform.instance.layoutChanges;
 
   /// The continuous hinge angle in **degrees**: 0° closed, 180° flat.
   ///
-  /// On a device without a hinge this completes without emitting, so a
-  /// `StreamBuilder` lands on [ConnectionState.done] rather than waiting
-  /// forever.
+  /// On a device that the platform reports has no hinge, this completes
+  /// without emitting, so a `StreamBuilder` lands on [ConnectionState.done]
+  /// rather than waiting forever. An iPad on iPadOS 27 never sends that
+  /// report, so there it stays open without emitting.
   ///
   /// Apple's guidance is to drive effects and interactions from the raw angle,
   /// not layout. Use [changes] or `FoldAwareBuilder` for layout decisions.

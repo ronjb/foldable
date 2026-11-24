@@ -124,6 +124,8 @@ enum ObjCRuntimeSupport {
     @convention(c) (AnyClass, Selector) -> Unmanaged<AnyObject>?
   private typealias InitWithObjectIMP =
     @convention(c) (AnyObject, Selector, AnyObject) -> Unmanaged<AnyObject>?
+  private typealias UIntObjectIMP =
+    @convention(c) (AnyObject, Selector, UInt) -> Unmanaged<AnyObject>?
   private typealias UIntAndFloatObjectIMP =
     @convention(c) (AnyObject, Selector, UInt, CGFloat) -> Unmanaged<AnyObject>?
   private typealias ObjectArgEdgeInsetsIMP =
@@ -166,6 +168,25 @@ enum ObjCRuntimeSupport {
     else { return nil }
     // A class accessor returns at +0.
     return (cls as AnyObject).perform(selector)?.takeUnretainedValue() as? NSObject
+  }
+
+  /// Calls a class method that takes an unsigned integer and returns an
+  /// object, such as
+  /// `+[UIViewLayoutRegion safeAreaLayoutRegionWithCornerAdaptation:]`.
+  ///
+  /// Returns `nil` when the class or the selector is missing.
+  static func classObject(
+    _ className: String, _ selectorName: String, _ integer: UInt
+  ) -> NSObject? {
+    guard let cls = NSClassFromString(className) else { return nil }
+    let selector = NSSelectorFromString(selectorName)
+    guard let metaclass = object_getClass(cls),
+      class_respondsToSelector(metaclass, selector),
+      let imp = class_getMethodImplementation(metaclass, selector)
+    else { return nil }
+    let function = unsafeBitCast(imp, to: UIntObjectIMP.self)
+    // A class factory method returns at +0.
+    return function(cls, selector, integer)?.takeUnretainedValue() as? NSObject
   }
 
   /// Calls a class method that takes an unsigned integer and a float and

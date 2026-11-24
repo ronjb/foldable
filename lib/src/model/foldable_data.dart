@@ -28,6 +28,7 @@ class FoldableData {
     this.verticalBarEdge = VerticalBarEdge.unspecified,
     this.verticalBarFrame = Rect.zero,
     this.topBarFrame = Rect.zero,
+    this.windowControlsFrame = Rect.zero,
   });
 
   /// The value used on devices without a hinge, on non-iOS platforms, and
@@ -105,6 +106,23 @@ class FoldableData {
   /// Safari does.
   final Rect topBarFrame;
 
+  /// The corner of the window that the iPad's window controls take, in
+  /// logical pixels, or [Rect.zero] where there are none.
+  ///
+  /// When an iPad runs apps in windows, iPadOS 26 and later draw the close,
+  /// minimize and full-screen controls in a top corner of the window.
+  /// `MediaQuery.padding` leaves no room for them, so they cover an app bar's
+  /// leading button. Native bars move their content out of this corner. It
+  /// runs from the window's top corner across to where content beside the
+  /// controls may start, and down to where content below them may start:
+  /// measured on the iPad mini (A20 Pro) simulator, 66 wide and 43 below the
+  /// top of the safe area. Full screen, on other devices, and before iOS 26,
+  /// it is [Rect.zero].
+  ///
+  /// It is the room for the collapsed controls. Expanding them draws the
+  /// full-size buttons over the content for a moment, as over a native bar.
+  final Rect windowControlsFrame;
+
   /// Whether this device physically has a hinge.
   bool get isFoldable => capabilities.isFoldable;
 
@@ -132,6 +150,7 @@ class FoldableData {
     VerticalBarEdge? verticalBarEdge,
     Rect? verticalBarFrame,
     Rect? topBarFrame,
+    Rect? windowControlsFrame,
   }) {
     return FoldableData(
       capabilities: capabilities ?? this.capabilities,
@@ -144,6 +163,7 @@ class FoldableData {
       verticalBarEdge: verticalBarEdge ?? this.verticalBarEdge,
       verticalBarFrame: verticalBarFrame ?? this.verticalBarFrame,
       topBarFrame: topBarFrame ?? this.topBarFrame,
+      windowControlsFrame: windowControlsFrame ?? this.windowControlsFrame,
     );
   }
 
@@ -159,6 +179,7 @@ class FoldableData {
           other.verticalBarEdge == verticalBarEdge &&
           other.verticalBarFrame == verticalBarFrame &&
           other.topBarFrame == topBarFrame &&
+          other.windowControlsFrame == windowControlsFrame &&
           listEquals(other.regions, regions) &&
           listEquals(other.displayFeatures, displayFeatures);
 
@@ -172,6 +193,7 @@ class FoldableData {
     verticalBarEdge,
     verticalBarFrame,
     topBarFrame,
+    windowControlsFrame,
     Object.hashAll(regions),
     Object.hashAll(displayFeatures),
   );

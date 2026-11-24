@@ -59,6 +59,7 @@ class _FoldableProviderState extends State<FoldableProvider> {
   FoldableData _data = FoldableData.unsupported;
   List<DisplayFeature> _features = const <DisplayFeature>[];
   StreamSubscription<FoldableData>? _subscription;
+  StreamSubscription<FoldableData>? _layoutSubscription;
   AppLifecycleListener? _lifecycle;
   bool _warnedAboutUpstream = false;
   Size? _lastSize;
@@ -122,6 +123,9 @@ class _FoldableProviderState extends State<FoldableProvider> {
       _platform.getSnapshot().then((FoldableData snapshot) {
         if (!mounted || session != _session) return;
         _apply(snapshot);
+        // Layout changes, such as the iPad's window controls, have their own
+        // stream, which stays open whatever the device supports.
+        _layoutSubscription = _platform.layoutChanges.listen(_apply);
         // The platform reports the absence of a hinge only through a hinge
         // update, so the first snapshot may still be `unknown`. Subscribe
         // unless support is definitively absent; on a device without a
@@ -141,6 +145,8 @@ class _FoldableProviderState extends State<FoldableProvider> {
   void _stop() {
     _subscription?.cancel();
     _subscription = null;
+    _layoutSubscription?.cancel();
+    _layoutSubscription = null;
     _lifecycle?.dispose();
     _lifecycle = null;
   }

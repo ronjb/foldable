@@ -32,6 +32,9 @@ enum FoldableAspect {
 
   /// The top bar beside the status bar on the iPhone Duo's inner display.
   topBar,
+
+  /// The corner of the window that the iPad's window controls take.
+  windowControls,
 }
 
 /// Exposes fold state to the widget tree.
@@ -143,6 +146,17 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
       )?.data.topBarFrame ??
       Rect.zero;
 
+  /// The corner of the window that the iPad's window controls take, or
+  /// [Rect.zero] where there are none, rebuilding only when it changes.
+  ///
+  /// See [FoldableData.windowControlsFrame].
+  static Rect windowControlsFrameOf(BuildContext context) =>
+      InheritedModel.inheritFrom<DuoMediaQuery>(
+        context,
+        aspect: FoldableAspect.windowControls,
+      )?.data.windowControlsFrame ??
+      Rect.zero;
+
   /// Whether the device has a hinge, rebuilding only when that changes.
   static bool isFoldableOf(BuildContext context) =>
       InheritedModel.inheritFrom<DuoMediaQuery>(
@@ -187,6 +201,8 @@ class DuoMediaQuery extends InheritedModel<FoldableAspect> {
           data.verticalBarEdge != old.verticalBarEdge ||
               data.verticalBarFrame != old.verticalBarFrame,
         FoldableAspect.topBar => data.topBarFrame != old.topBarFrame,
+        FoldableAspect.windowControls =>
+          data.windowControlsFrame != old.windowControlsFrame,
       },
     );
   }

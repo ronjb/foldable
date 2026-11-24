@@ -20,6 +20,18 @@
   where the cluster begins and narrows when a Live Activity widens the
   cluster, and `Rect.zero` everywhere else. The plugin re-sends the snapshot
   when it moves.
+- **Window controls.** When an iPad runs apps in windows, iPadOS 26 and later
+  draw the close, minimize and full-screen controls in a top corner of the
+  window, inside the safe area. `FoldableData.windowControlsFrame` and
+  `DuoMediaQuery.windowControlsFrameOf` give the corner they take, from
+  UIKit's safe area with corner adaptation, and `Rect.zero` everywhere else.
+- **Layout stream.** The plugin sends every layout change it sees (reserved
+  regions, the vertical bar, the top bar and the window controls) over a new
+  `foldable/layout` event channel too, which stays open on devices without a
+  hinge. `Foldable.layoutChanges` exposes it, and `FoldableProvider` listens
+  to it whatever the support level. The hinge stream is unchanged.
+- **Example app:** the app bars keep clear of an iPad's window controls, and
+  the Device card shows their frame.
 - **Example app:** example buttons in the vertical bar, tinted and labelled
   with the space available, and the cards no longer run under the status bar.
 

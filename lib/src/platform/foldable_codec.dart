@@ -43,6 +43,7 @@ abstract final class FoldableCodec {
       verticalBarEdge: VerticalBarEdge.fromWire(raw['verticalBarEdge']),
       verticalBarFrame: _rect(raw['verticalBar']) ?? Rect.zero,
       topBarFrame: _rect(raw['topBar']) ?? Rect.zero,
+      windowControlsFrame: _rect(raw['windowControls']) ?? Rect.zero,
       // Bridging is a pure-Dart decision; the platform never supplies these.
       displayFeatures: const [],
     );

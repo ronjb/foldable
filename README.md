@@ -67,9 +67,10 @@ if (await Foldable.isFoldable) {
 }
 ```
 
-On any device that is not an iPhone Duo, `isFoldable` is `false` and every
-stream completes without emitting, so a `StreamBuilder` lands on
-`ConnectionState.done` rather than waiting forever.
+On any device that is not an iPhone Duo, `isFoldable` is `false`, and these
+streams complete once the platform reports that the device has no hinge, so a
+`StreamBuilder` lands on `ConnectionState.done` rather than waiting forever.
+An iPad on iPadOS 27 never sends that report, so there they stay open.
 
 Inside the widget tree, wrap once and read anywhere below:
 
@@ -198,6 +199,30 @@ the backdrop iOS draws behind the cluster, which reaches about 76pt down. The
 `Scaffold` still leaves room for the whole status bar above an app bar, which
 an `AppBar` stretches to fill, so give it a fixed height as well. The example
 app does all of this.
+
+### The window controls on an iPad
+
+Not only foldables: when an iPad runs apps in windows, iPadOS 26 and later
+draw the close, minimize and full-screen controls in the window's top-left
+corner, or its top-right in a right-to-left language, inside the safe area,
+where they cover an `AppBar`'s back button or actions. Native bars move their
+content beside them. Flutter only sees the safe area, which leaves them out.
+
+`DuoMediaQuery.windowControlsFrameOf` gives the corner they take, from UIKit's
+safe area with corner adaptation (`UIViewLayoutRegion`), and `Rect.zero` in
+full screen, on other devices and before iOS 26. Measured on the iPad mini
+(A20 Pro) simulator, it is 66×53pt at 0, 0 in a window whose safe area starts
+10pt down. An `AppBar` keeps its contents inside `MediaQuery.padding`, so
+widening the padding on the controls' side moves its leading button and title
+out of the corner while its background still runs under the controls. Its
+`bottom` moves as well, although with the standard toolbar height it already
+sits below the corner. The example app does this.
+
+The corner is the collapsed controls'. Tapping them expands full-size buttons
+over the content for a moment, as over a native bar, which changes nothing
+here. Going full screen, UIKit settles the corner one layout pass after the
+window's new size, so the plugin sends these changes over a stream of their
+own, which stays open on devices without a hinge.
 
 ## The `MediaQuery` bridge is opt-in, and here is why
 

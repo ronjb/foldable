@@ -6,11 +6,13 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
 
   private static let methodChannelName = "foldable/methods"
   private static let eventChannelName = "foldable/events"
+  private static let layoutChannelName = "foldable/layout"
   private static let wireVersion = 1
 
   private let hingeSource: HingeSource
   private let regionSource: RegionSource
   private var streamHandler: HingeStreamHandler?
+  private var layoutHandler: LayoutStreamHandler?
   private weak var registrar: FlutterPluginRegistrar?
 
   override init() {
@@ -37,6 +39,15 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
     let events = FlutterEventChannel(
       name: eventChannelName, binaryMessenger: registrar.messenger())
     events.setStreamHandler(handler)
+
+    let layoutHandler = LayoutStreamHandler(snapshotBuilder: { [weak instance] in
+      guard let instance = instance else { return [:] }
+      return instance.snapshot(with: instance.hingeSource.currentReading)
+    })
+    instance.layoutHandler = layoutHandler
+    let layout = FlutterEventChannel(
+      name: layoutChannelName, binaryMessenger: registrar.messenger())
+    layout.setStreamHandler(layoutHandler)
 
     // Both lifecycles, so activation reaches the plugin whether or not the app
     // has migrated to UIScene.
@@ -109,7 +120,16 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
   /// on the simulator it moved about 2ms before the cluster's occlusion
   /// region.
   ///
+  /// The window controls' corner is read there as well. Measured on the iPad
+  /// mini (A20 Pro) simulator, going full screen, the first layout at the new
+  /// size still read the window's controls, and the pass 13ms later, with no
+  /// change of size or safe area, read none.
+  ///
   /// The same view also re-emits when the vertical bar edge changes.
+  ///
+  /// Every change goes out on the layout stream, which stays open on a device
+  /// without a hinge, such as an iPad, and on the hinge stream too while that
+  /// is open.
   private func observeRegionLayout(in host: UIView) {
     // Moves with the hinge interaction when the Flutter view is replaced.
     guard regionObserver?.superview !== host else { return }
@@ -124,7 +144,8 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
         .joined(separator: "|")
       let bar = FoldableVerticalBar.frame(in: view, edge: FoldableVerticalBar.edge(for: view))
       let topBar = FoldableTopBar.frame(in: view)
-      let signature = "\(regions)|bar:\(bar)|top:\(topBar)"
+      let controls = FoldableWindowControls.frame(in: view)
+      let signature = "\(regions)|bar:\(bar)|top:\(topBar)|controls:\(controls)"
       guard signature != self.lastLayoutSignature else { return }
       self.lastLayoutSignature = signature
       self.emitUpdate()
@@ -138,8 +159,9 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
 
   /// Sends a fresh snapshot to Dart.
   private func emitUpdate() {
-    // A device that has settled as having no hinge has already had its stream
-    // closed; there is nothing left to tell it.
+    layoutHandler?.emit()
+    // A device that has settled as having no hinge has already had its hinge
+    // stream closed; there is nothing left to tell it there.
     guard hingeSource.hasHinge != false else { return }
     streamHandler?.emit(hingeSource.currentReading)
   }
@@ -197,6 +219,7 @@ public class FoldablePlugin: NSObject, FlutterPlugin, FlutterSceneLifeCycleDeleg
       "verticalBarEdge": barEdge.rawValue,
       "verticalBar": Self.wire(bar),
       "topBar": Self.wire(FoldableTopBar.frame(in: view)),
+      "windowControls": Self.wire(FoldableWindowControls.frame(in: view)),
     ]
     payload["angleDegrees"] = reading?.angleDegrees ?? NSNull()
     return payload
@@ -292,6 +315,41 @@ final class HingeStreamHandler: NSObject, FlutterStreamHandler {
     } else {
       DispatchQueue.main.async(execute: deliver)
     }
+  }
+}
+
+/// Streams a snapshot whenever the layout observer sees a change.
+///
+/// Unlike the hinge stream it never closes, so a device without a hinge, such
+/// as an iPad with its window controls, hears about layout changes too.
+final class LayoutStreamHandler: NSObject, FlutterStreamHandler {
+
+  private let snapshotBuilder: () -> [String: Any]
+  private var sink: FlutterEventSink?
+
+  init(snapshotBuilder: @escaping () -> [String: Any]) {
+    self.snapshotBuilder = snapshotBuilder
+    super.init()
+  }
+
+  /// Starts streaming with the current state, so a change between Dart's
+  /// last snapshot and this subscription is not lost.
+  func onListen(
+    withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink
+  ) -> FlutterError? {
+    sink = events
+    events(snapshotBuilder())
+    return nil
+  }
+
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    sink = nil
+    return nil
+  }
+
+  /// Sends the current state. Called on the main thread, from layout.
+  func emit() {
+    sink?(snapshotBuilder())
   }
 }
 

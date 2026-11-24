@@ -321,4 +321,164 @@ void main() {
       ]);
     });
   });
+
+  group('layout changes', () {
+    setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.iOS);
+
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      messenger.setMockMethodCallHandler(
+        const MethodChannel(kFoldableLayoutChannel),
+        null,
+      );
+    });
+
+    /// Records the layout channel's `listen`/`cancel` handshake.
+    List<String> recordLayoutHandshake() {
+      final List<String> handshake = <String>[];
+      messenger.setMockMethodCallHandler(
+        const MethodChannel(kFoldableLayoutChannel),
+        (MethodCall call) async {
+          handshake.add(call.method);
+          return null;
+        },
+      );
+      return handshake;
+    }
+
+    /// An iPad in a window, with its window controls.
+    Map<String, Object?> windowed({String sizeClass = 'regular'}) =>
+        <String, Object?>{
+          ...payload(isFoldable: false, angle: null),
+          'horizontalSizeClass': sizeClass,
+          'windowControls': <String, Object?>{
+            'left': 0.0,
+            'top': 0.0,
+            'width': 66.0,
+            'height': 53.0,
+          },
+        };
+
+    Future<void> emitLayout(Map<String, Object?> event) =>
+        messenger.handlePlatformMessage(
+          kFoldableLayoutChannel,
+          codec.encodeSuccessEnvelope(event),
+          (_) {},
+        );
+
+    test('decodes the window controls without a hinge', () async {
+      mockMethods(payload(isFoldable: false, angle: null));
+      final List<String> handshake = recordLayoutHandshake();
+      FoldablePlatform.instance = platform;
+      addTearDown(Foldable.debugReset);
+
+      final List<FoldableData> received = <FoldableData>[];
+      final StreamSubscription<FoldableData> subscription = Foldable
+          .layoutChanges
+          .listen(received.add);
+      await pumpEventQueue();
+      await emitLayout(windowed());
+      await pumpEventQueue();
+      await subscription.cancel();
+      await pumpEventQueue();
+
+      expect(
+        received.single.windowControlsFrame,
+        const Rect.fromLTWH(0, 0, 66, 53),
+      );
+      expect(handshake, <String>['listen', 'cancel']);
+    });
+
+    test(
+      'a later listener gets the current layout, not the last event',
+      () async {
+        Map<String, Object?> current = windowed();
+        messenger.setMockMethodCallHandler(
+          const MethodChannel(kFoldableMethodChannel),
+          (MethodCall call) async => current,
+        );
+        recordLayoutHandshake();
+
+        // The plugin sends the current layout when the channel is listened to,
+        // which only the first listener does.
+        final StreamSubscription<FoldableData> first = platform.layoutChanges
+            .listen((_) {});
+        await pumpEventQueue();
+        await emitLayout(current);
+        await pumpEventQueue();
+
+        // The window narrows. The controls stay put, so no layout event comes.
+        current = windowed(sizeClass: 'compact');
+
+        final List<FoldableData> received = <FoldableData>[];
+        final StreamSubscription<FoldableData> later = platform.layoutChanges
+            .listen(received.add);
+        await pumpEventQueue();
+        await later.cancel();
+        await first.cancel();
+
+        expect(received.single.horizontalSizeClass, SizeClass.compact);
+        expect(
+          received.single.windowControlsFrame,
+          const Rect.fromLTWH(0, 0, 66, 53),
+        );
+      },
+    );
+
+    test('a later listener that leaves before its snapshot is fine', () async {
+      int calls = 0;
+      final Completer<Object?> reply = Completer<Object?>();
+      messenger.setMockMethodCallHandler(
+        const MethodChannel(kFoldableMethodChannel),
+        (MethodCall call) =>
+            ++calls == 1 ? Future<Object?>.value(windowed()) : reply.future,
+      );
+      recordLayoutHandshake();
+
+      final StreamSubscription<FoldableData> first = platform.layoutChanges
+          .listen((_) {});
+      await pumpEventQueue();
+      final List<FoldableData> received = <FoldableData>[];
+      final StreamSubscription<FoldableData> later = platform.layoutChanges
+          .listen(received.add);
+      await pumpEventQueue();
+      await later.cancel();
+      reply.complete(windowed());
+      await pumpEventQueue();
+      await first.cancel();
+
+      expect(received, isEmpty);
+    });
+
+    test('a missing plugin is never listened to', () async {
+      // No handler on the method channel, as in an app's widget tests.
+      final List<String> handshake = recordLayoutHandshake();
+
+      platform.layoutChanges.listen((_) {});
+      await pumpEventQueue();
+
+      expect(handshake, isEmpty);
+    });
+
+    test(
+      'a listener that leaves before the plugin answers starts nothing',
+      () async {
+        final Completer<Object?> reply = Completer<Object?>();
+        messenger.setMockMethodCallHandler(
+          const MethodChannel(kFoldableMethodChannel),
+          (MethodCall call) => reply.future,
+        );
+        final List<String> handshake = recordLayoutHandshake();
+
+        final StreamSubscription<FoldableData> early = platform.layoutChanges
+            .listen((_) {});
+        await pumpEventQueue();
+        await early.cancel();
+        reply.complete(payload(isFoldable: false, angle: null));
+        await pumpEventQueue();
+
+        expect(handshake, isEmpty);
+      },
+    );
+  });
 }

@@ -38,7 +38,11 @@ export 'src/model/reserved_region.dart';
 export 'src/model/size_class.dart';
 export 'src/model/vertical_bar_edge.dart';
 export 'src/platform/foldable_method_channel.dart'
-    show kFoldableEventChannel, kFoldableMethodChannel, MethodChannelFoldable;
+    show
+        kFoldableEventChannel,
+        kFoldableLayoutChannel,
+        kFoldableMethodChannel,
+        MethodChannelFoldable;
 export 'src/platform/foldable_platform.dart';
 export 'src/widgets/duo_media_query.dart';
 export 'src/widgets/fold_aware_builder.dart';
