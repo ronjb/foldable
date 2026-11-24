@@ -204,9 +204,10 @@ app does all of this.
 
 Not only foldables: when an iPad runs apps in windows, iPadOS 26 and later
 draw the close, minimize and full-screen controls in the window's top-left
-corner, or its top-right in a right-to-left language, inside the safe area,
-where they cover an `AppBar`'s back button or actions. Native bars move their
-content beside them. Flutter only sees the safe area, which leaves them out.
+corner, or its top-right when the iPad is set to a right-to-left language,
+whatever the app's own direction. They sit inside the safe area, where they
+cover an `AppBar`'s back button or actions. Native bars move their content
+beside them. Flutter only sees the safe area, which leaves them out.
 
 `DuoMediaQuery.windowControlsFrameOf` gives the corner they take, from UIKit's
 safe area with corner adaptation (`UIViewLayoutRegion`), and `Rect.zero` in

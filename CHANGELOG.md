@@ -30,6 +30,12 @@
   `foldable/layout` event channel too, which stays open on devices without a
   hinge. `Foldable.layoutChanges` exposes it, and `FoldableProvider` listens
   to it whatever the support level. The hinge stream is unchanged.
+- **Widget tests** that run as iOS and fake the plugin with a mock handler on
+  `foldable/methods` need one on `foldable/layout` too. Once the method
+  channel answers, `FoldableProvider` listens to the layout channel, and an
+  `EventChannel` with nothing behind it reports a `MissingPluginException`
+  that fails the test. Tests using `debugData` or `platform`, or with no mock
+  at all, are unaffected.
 - **Example app:** the app bars keep clear of an iPad's window controls, and
   the Device card shows their frame.
 - **Example app:** example buttons in the vertical bar, tinted and labelled
